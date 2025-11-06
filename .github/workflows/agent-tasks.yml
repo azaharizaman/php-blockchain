@@ -1,0 +1,56 @@
+name: Agent Tasks (CI)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch: {}
+
+jobs:
+  test-and-analyse:
+    name: Run tests and static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # propagate secret into env so it can be used in an if without referencing secrets directly
+      RUN_INTEGRATION_TESTS: ${{ secrets.RUN_INTEGRATION_TESTS }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --no-interaction || true
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Check driver documentation
+        run: composer check-docs || (echo "Missing driver docs. Add docs in docs/drivers/" && exit 1)
+
+      - name: Run tests
+        run: composer test || (echo "Tests failed" && exit 1)
+
+      - name: Run static analysis
+        run: composer analyse || (echo "Static analysis failed" && exit 1)
+
+      - name: Summarize
+        run: |
+          echo "Tests and static analysis complete."
+
+      - name: Run integration tests (optional)
+        if: env.RUN_INTEGRATION_TESTS == 'true'
+        run: |
+          echo "RUN_INTEGRATION_TESTS=true — running integration tests (ensure network access allowed by operator)"
+          # Integration tests should be restricted to testnets and gated by this secret.
+          if [ -d tests/Integration ]; then
+            vendor/bin/phpunit --testsuite integration || (echo "Integration tests failed" && exit 1)
+          else
+            echo "No integration tests found. Skipping."
+          fi
