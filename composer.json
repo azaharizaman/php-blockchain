@@ -27,13 +27,15 @@
   },
   "require-dev": {
     "phpunit/phpunit": "^10.5",
-    "squizlabs/php_codesniffer": "^4.0"
+    "squizlabs/php_codesniffer": "^4.0",
+    "phpstan/phpstan": "^1.10"
   },
   "scripts": {
     "test": "vendor/bin/phpunit",
     "integration-test": "vendor/bin/phpunit --testsuite integration || vendor/bin/phpunit tests/Integration || echo \"No integration tests found\"",
     "generate-docs": "php scripts/generate-driver-docs.php",
-    "check-docs": "php scripts/check-driver-docs.php"
+    "check-docs": "php scripts/check-driver-docs.php",
+    "phpstan": "vendor/bin/phpstan analyse --memory-limit=1G --level=7 src tests"
   },
   "extra": {
     "branch-alias": {
