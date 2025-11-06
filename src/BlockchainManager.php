@@ -73,7 +73,9 @@ class BlockchainManager implements BlockchainDriverInterface
             $this->currentDriver = $this->drivers[$name];
             return $this;
         }
-        $driver = $this->registry->getDriver($name);
+        
+        $driverClass = $this->registry->getDriver($name);
+        $driver = new $driverClass();
         $driver->connect($config);
         
         $this->drivers[$name] = $driver;
