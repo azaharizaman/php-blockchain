@@ -1,0 +1,27 @@
+module: SupportedNetworks
+epic: Supported Networks
+tasks:
+  - id: SN-001
+    description: Create driver blueprint template for new networks (fields: endpoints, token standards, optional features)
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: [CU-001]
+  - id: SN-002
+    description: Add docs stubs for each planned network under `docs/drivers/`
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: []
+  - id: SN-003
+    description: Create testnet example configs for each supported network
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [SN-002]
+  - id: SN-004
+    description: Prioritize and schedule driver implementations by roadmap phases
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: []

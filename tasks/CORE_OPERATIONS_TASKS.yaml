@@ -1,0 +1,33 @@
+module: CoreOperations
+epic: Core Operations
+tasks:
+  - id: CO-001
+    description: Implement unified `getBalance`, `sendTransaction`, `getTransaction`, and `getBlock` adapters that call into drivers
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: [CU-001]
+  - id: CO-002
+    description: Implement token helpers (getTokenBalance, transferToken) with standardized response shapes
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: [CU-001]
+  - id: CO-003
+    description: Implement gas estimation and fee calculation utilities with driver hook points
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [CU-001]
+  - id: CO-004
+    description: Implement pagination and history retrieval helpers for transactions and token transfers
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [CO-001]
+  - id: CO-005
+    description: Add instrumentation hooks for metrics/tracing on core operations
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: [CU-002]

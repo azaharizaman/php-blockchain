@@ -17,7 +17,7 @@ class BlockchainManager
     public function __construct(?string $driverName = null, array $config = [])
     {
         $this->driverRegistry = new DriverRegistry();
-        
+
         if ($driverName) {
             $this->setDriver($driverName, $config);
         }
@@ -33,11 +33,11 @@ class BlockchainManager
         }
 
         $this->currentDriver = $this->driverRegistry->getDriver($driverName);
-        
+
         if (empty($config)) {
             throw new ConfigurationException("Configuration is required for blockchain driver.");
         }
-        
+
         $this->currentDriver->connect($config);
     }
 

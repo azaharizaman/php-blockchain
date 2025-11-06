@@ -1,0 +1,27 @@
+module: AgenticCapabilities
+epic: Agentic Capabilities
+tasks:
+  - id: AG-001
+    description: Implement `create-new-driver` agent task that scaffolds a driver, test and docs stub
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [CU-001]
+  - id: AG-002
+    description: Implement `update-readme` agent task to regenerate supported drivers list
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: []
+  - id: AG-003
+    description: Implement safety guardrails for agent tasks (no secrets, restricted paths)
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: []
+  - id: AG-004
+    description: Add audit logging for agent-generated changes and task runs
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: [AG-001]

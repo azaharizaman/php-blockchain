@@ -12,7 +12,7 @@ use Blockchain\Exceptions\ConfigurationException;
 class SolanaDriver implements BlockchainDriverInterface
 {
     private const LAMPORTS_PER_SOL = 1000000000;
-    
+
     protected ?Client $client = null;
     protected array $config = [];
 
@@ -53,14 +53,13 @@ class SolanaDriver implements BlockchainDriverInterface
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['error'])) {
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
             // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
             return ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
-            
         } catch (RequestException $e) {
             throw new \Exception('Failed to get balance: ' . $e->getMessage());
         }
@@ -72,13 +71,13 @@ class SolanaDriver implements BlockchainDriverInterface
     public function sendTransaction(string $from, string $to, float $amount, array $options = []): string
     {
         $this->ensureConnected();
-        
+
         // This is a placeholder implementation
         // In a real implementation, you would:
         // 1. Create a transaction
         // 2. Sign it with the private key
         // 3. Send it to the network
-        
+
         throw new \Exception('Transaction sending not yet implemented for Solana driver.');
     }
 
@@ -103,13 +102,12 @@ class SolanaDriver implements BlockchainDriverInterface
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['error'])) {
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
             return $data['result'] ?? [];
-            
         } catch (RequestException $e) {
             throw new \Exception('Failed to get transaction: ' . $e->getMessage());
         }
@@ -136,13 +134,12 @@ class SolanaDriver implements BlockchainDriverInterface
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['error'])) {
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
             return $data['result'] ?? [];
-            
         } catch (RequestException $e) {
             throw new \Exception('Failed to get block: ' . $e->getMessage());
         }
@@ -180,13 +177,13 @@ class SolanaDriver implements BlockchainDriverInterface
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['error'])) {
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
             $accounts = $data['result']['value'] ?? [];
-            
+
             if (empty($accounts)) {
                 return 0.0;
             }
@@ -194,9 +191,8 @@ class SolanaDriver implements BlockchainDriverInterface
             // Return balance from the first token account
             $tokenInfo = $accounts[0]['account']['data']['parsed']['info'] ?? [];
             $balance = $tokenInfo['tokenAmount']['uiAmount'] ?? 0;
-            
+
             return (float)$balance;
-            
         } catch (RequestException $e) {
             throw new \Exception('Failed to get token balance: ' . $e->getMessage());
         }
@@ -219,13 +215,12 @@ class SolanaDriver implements BlockchainDriverInterface
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['error'])) {
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
             return $data['result'] ?? [];
-            
         } catch (RequestException $e) {
             throw new \Exception('Failed to get network info: ' . $e->getMessage());
         }

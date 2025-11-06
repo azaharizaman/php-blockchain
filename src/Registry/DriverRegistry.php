@@ -38,7 +38,7 @@ class DriverRegistry
     public function getDriver(string $name): BlockchainDriverInterface
     {
         $name = strtolower($name);
-        
+
         if (!$this->hasDriver($name)) {
             throw new UnsupportedDriverException("Driver '{$name}' is not registered.");
         }
@@ -70,7 +70,7 @@ class DriverRegistry
     {
         // Register Solana driver
         $this->registerDriver('solana', \Blockchain\Drivers\SolanaDriver::class);
-        
+
         // Additional drivers can be registered here as they are implemented
         // $this->registerDriver('ethereum', \Blockchain\Drivers\EthereumDriver::class);
         // $this->registerDriver('polygon', \Blockchain\Drivers\PolygonDriver::class);

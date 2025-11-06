@@ -1,0 +1,63 @@
+module: EthereumDriver
+epic: Ethereum Driver Implementation
+tasks:
+  - id: ETH-001
+    description: Implement `EthereumDriver` class that implements `Blockchain\\Contracts\\BlockchainDriverInterface`
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [CU-001, CU-002]
+  - id: ETH-002
+    description: Implement JSON-RPC connection logic with configurable endpoints (Infura/Alchemy/self-hosted)
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: [ETH-001]
+  - id: ETH-003
+    description: Add balance and token (ERC-20) balance helpers
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: [ETH-001, ETH-002]
+  - id: ETH-004
+    description: Implement transaction sending (raw signed txs), gas price strategy and `estimateGas()`
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [ETH-002]
+  - id: ETH-005
+    description: Add contract interaction helpers (ABI encode/decode, call, send)
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [ETH-001]
+  - id: ETH-006
+    description: Implement ERC-20 and ERC-721 operations (transfer, approval checks)
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [ETH-003, ETH-005]
+  - id: ETH-007
+    description: Event logs parsing and indexed event queries
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [ETH-005]
+  - id: ETH-008
+    description: Add pagination and history retrieval for txs and token transfers
+    status: TODO
+    priority: Low
+    estimated_effort: 3h
+    depends_on: [ETH-003]
+  - id: ETH-009
+    description: Integrate caching layer for repeated RPC calls
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [ETH-002]
+  - id: ETH-010
+    description: Create unit tests (mocked RPC) and integration tests (testnet) for Ethereum driver
+    status: TODO
+    priority: High
+    estimated_effort: 6h
+    depends_on: [ETH-001, ETH-002, ETH-003]

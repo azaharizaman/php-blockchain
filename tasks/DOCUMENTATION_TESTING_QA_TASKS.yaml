@@ -1,0 +1,27 @@
+module: DocumentationTestingQA
+epic: Documentation, Testing & QA
+tasks:
+  - id: QA-001
+    description: Ensure README and docs are regenerated and up-to-date with supported drivers
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: [AG-002]
+  - id: QA-002
+    description: Add PHPUnit coverage enforcement and reporting to CI
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: []
+  - id: QA-003
+    description: Create test harness and mock utilities for RPC responses
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: []
+  - id: QA-004
+    description: Add static analysis (PHPStan) and PSR checks in CI
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: []

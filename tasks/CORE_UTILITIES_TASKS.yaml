@@ -1,0 +1,57 @@
+module: CoreUtilities
+epic: PHP Blockchain Core Utilities
+tasks:
+  - id: CU-001
+    description: Implement `BlockchainDriverInterface` with core methods (connect, getBalance, sendTransaction, getTransaction, getBlock)
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: []
+  - id: CU-002
+    description: Implement `BlockchainManager` to orchestrate drivers and expose unified API
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: [CU-001]
+  - id: CU-003
+    description: Implement `DriverRegistry` for runtime registration and discovery
+    status: TODO
+    priority: High
+    estimated_effort: 2h
+    depends_on: [CU-001]
+  - id: CU-004
+    description: Create structured exception classes (ConfigurationException, UnsupportedDriverException, TransactionException, ValidationException)
+    status: TODO
+    priority: Medium
+    estimated_effort: 1h
+    depends_on: []
+  - id: CU-005
+    description: Implement utility helpers (address validation, format conversion, serialization)
+    status: TODO
+    priority: Medium
+    estimated_effort: 4h
+    depends_on: []
+  - id: CU-006
+    description: Build HTTP client adapter (Guzzle wrapper) with DI support
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: []
+  - id: CU-007
+    description: Implement configuration loader and unified config schema
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: []
+  - id: CU-008
+    description: Add caching and connection pooling helpers
+    status: TODO
+    priority: Medium
+    estimated_effort: 3h
+    depends_on: [CU-006]
+  - id: CU-009
+    description: Add unit tests and PSR-12 linting for core utilities
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: [CU-001, CU-002, CU-003, CU-004]

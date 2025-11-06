@@ -1,0 +1,33 @@
+module: SecurityReliability
+epic: Security & Reliability
+tasks:
+  - id: SR-001
+    description: Create secure key management guidance and helper interfaces (env loading, HSM adapter)
+    status: TODO
+    priority: High
+    estimated_effort: 4h
+    depends_on: []
+  - id: SR-002
+    description: Implement input validation and sanitization utilities for addresses, amounts, and RPC inputs
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: []
+  - id: SR-003
+    description: Add retry/backoff and rate-limiting middleware to HTTP client adapter
+    status: TODO
+    priority: High
+    estimated_effort: 3h
+    depends_on: [CU-006]
+  - id: SR-004
+    description: Implement logging redaction and secrets masking in error/log outputs
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: []
+  - id: SR-005
+    description: Add tests verifying no sensitive data is logged and transport-level TLS checks
+    status: TODO
+    priority: Medium
+    estimated_effort: 2h
+    depends_on: [SR-004]
