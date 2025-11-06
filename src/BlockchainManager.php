@@ -46,6 +46,11 @@ class BlockchainManager implements BlockchainDriverInterface
             throw new UnsupportedDriverException("Driver '{$name}' is not supported.");
         }
 
+        if (isset($this->drivers[$name])) {
+            // Driver already loaded, just switch to it
+            $this->currentDriver = $this->drivers[$name];
+            return $this;
+        }
         $driver = $this->registry->getDriver($name);
         $driver->connect($config);
         
