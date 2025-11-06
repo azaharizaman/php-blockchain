@@ -205,6 +205,8 @@ class BlockchainManager implements BlockchainDriverInterface
 
     /**
      * Ensure a driver is set before performing operations.
+     *
+     * @throws ConfigurationException If no driver is set
      */
     private function ensureDriverIsSet(): void
     {
