@@ -27,9 +27,31 @@ class BlockchainManager implements BlockchainDriverInterface
     
     private DriverRegistry $registry;
 
-    public function __construct(?DriverRegistry $registry = null)
+    /**
+     * BlockchainManager constructor.
+     *
+     * Supports multiple initialization patterns for backward compatibility:
+     * - New pattern: new BlockchainManager($registry) or new BlockchainManager()
+     * - Old pattern: new BlockchainManager('driver_name', $config)
+     *
+     * @param string|DriverRegistry|null $driverNameOrRegistry Driver name (string) for backward compatibility, or DriverRegistry instance, or null
+     * @param array<string,mixed> $config Driver configuration (only used with driver name pattern)
+     * @throws UnsupportedDriverException If driver name is invalid
+     */
+    public function __construct(string|DriverRegistry|null $driverNameOrRegistry = null, array $config = [])
     {
-        $this->registry = $registry ?? new DriverRegistry();
+        // Handle different constructor patterns
+        if ($driverNameOrRegistry instanceof DriverRegistry) {
+            // New pattern: DriverRegistry provided
+            $this->registry = $driverNameOrRegistry;
+        } elseif (is_string($driverNameOrRegistry)) {
+            // Old pattern: driver name provided for backward compatibility
+            $this->registry = new DriverRegistry();
+            $this->setDriver($driverNameOrRegistry, $config);
+        } else {
+            // No arguments or null provided
+            $this->registry = new DriverRegistry();
+        }
     }
 
     /**

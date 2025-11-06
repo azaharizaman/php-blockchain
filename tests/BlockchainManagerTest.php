@@ -199,4 +199,27 @@ class BlockchainManagerTest extends TestCase
         
         $this->assertInstanceOf(DriverRegistry::class, $registry);
     }
+
+    public function testBackwardCompatibleConstructorWithDriverName(): void
+    {
+        $config = [
+            'endpoint' => 'https://api.mainnet-beta.solana.com',
+            'timeout' => 30
+        ];
+        
+        // Old pattern: new BlockchainManager('driver_name', $config)
+        $manager = new BlockchainManager('solana', $config);
+        
+        $this->assertInstanceOf(BlockchainManager::class, $manager);
+        $this->assertInstanceOf(DriverRegistry::class, $manager->getDriverRegistry());
+    }
+
+    public function testBackwardCompatibleConstructorWithInvalidDriver(): void
+    {
+        $this->expectException(UnsupportedDriverException::class);
+        $this->expectExceptionMessage("Driver 'invalid_driver' is not supported.");
+        
+        // Should throw exception for invalid driver
+        new BlockchainManager('invalid_driver', ['endpoint' => 'test']);
+    }
 }
