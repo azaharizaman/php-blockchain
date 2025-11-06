@@ -26,7 +26,7 @@ jobs:
           tools: composer:v2
 
       - name: Validate composer.json
-        run: composer validate --no-interaction || true
+        run: composer validate --no-interaction
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
