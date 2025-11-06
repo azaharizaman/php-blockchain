@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Blockchain\Tests\Registry;
+namespace Tests\Registry;
 
 use PHPUnit\Framework\TestCase;
 use Blockchain\Registry\DriverRegistry;
