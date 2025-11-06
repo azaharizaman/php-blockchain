@@ -86,6 +86,9 @@ class DriverRegistry
      * Registers the Solana driver as the default driver.
      * This method is idempotent - safe to call multiple times.
      *
+     * Note: This method is public primarily for testing purposes and typically does not need to be called directly,
+     * as it is invoked automatically in the constructor.
+     *
      * @return void
      */
     public function registerDefaultDrivers(): void
