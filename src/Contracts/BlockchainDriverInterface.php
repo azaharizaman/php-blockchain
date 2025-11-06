@@ -144,8 +144,10 @@ interface BlockchainDriverInterface
      * Get token balance for a specific token (optional).
      *
      * Retrieves the balance of a specific token (e.g., ERC-20, SPL) for the
-     * given address. Returns null if the blockchain or driver does not support
-     * token balance queries, or if the address has no balance of the specified token.
+     * given address.
+     *
+     * Returns null if the blockchain or driver does not support token balance queries.
+     * Returns 0.0 if the address has no balance of the specified token.
      *
      * @param string $address The wallet address to query
      * @param string $tokenAddress The token contract/mint address
@@ -153,7 +155,7 @@ interface BlockchainDriverInterface
      * @throws \Blockchain\Exceptions\ConfigurationException If the driver is not connected
      * @throws \Exception If the token balance query fails
      *
-     * @return float|null The token balance, or null if not supported/not found
+     * @return float|null The token balance, or null if not supported
      */
     public function getTokenBalance(string $address, string $tokenAddress): ?float;
 
