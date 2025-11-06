@@ -84,25 +84,56 @@ $ethereum = new BlockchainManager('ethereum', [
 
 ### Error Handling
 
+The package provides structured exception classes for different error scenarios:
+
 ```php
 use Blockchain\BlockchainManager;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Exceptions\UnsupportedDriverException;
+use Blockchain\Exceptions\TransactionException;
+use Blockchain\Exceptions\ValidationException;
 
 try {
     $blockchain = new BlockchainManager('solana', [
         'endpoint' => 'https://api.mainnet-beta.solana.com'
     ]);
     
-    $balance = $blockchain->getBalance('invalid_address');
+    $balance = $blockchain->getBalance('address');
+    
+} catch (ValidationException $e) {
+    // Handle input validation errors
+    echo "Validation error: " . $e->getMessage();
+    foreach ($e->getErrors() as $field => $error) {
+        echo "  {$field}: {$error}\n";
+    }
+} catch (TransactionException $e) {
+    // Handle transaction errors
+    echo "Transaction failed: " . $e->getMessage();
+    if ($hash = $e->getTransactionHash()) {
+        echo "  Transaction hash: {$hash}\n";
+    }
 } catch (ConfigurationException $e) {
+    // Handle configuration errors
     echo "Configuration error: " . $e->getMessage();
 } catch (UnsupportedDriverException $e) {
+    // Handle driver errors
     echo "Driver error: " . $e->getMessage();
-} catch (Exception $e) {
+} catch (\Exception $e) {
+    // Handle any other errors
     echo "General error: " . $e->getMessage();
 }
 ```
+
+#### Exception Types
+
+| Exception | Thrown When | Additional Methods |
+|-----------|-------------|-------------------|
+| `ConfigurationException` | Configuration is invalid or missing | - |
+| `UnsupportedDriverException` | Driver is not registered or available | - |
+| `TransactionException` | Transaction operations fail | `getTransactionHash()` |
+| `ValidationException` | Input validation fails | `getErrors()` |
+
+For detailed exception documentation, see [src/Exceptions/README.md](src/Exceptions/README.md).
 
 ### Registry Management
 
