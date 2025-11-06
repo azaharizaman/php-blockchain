@@ -21,7 +21,7 @@ class BlockchainManager implements BlockchainDriverInterface
     private ?BlockchainDriverInterface $currentDriver = null;
     
     /**
-     * @var array<string,BlockchainDriverInterface>
+     * @var array<string, BlockchainDriverInterface>
      */
     private array $drivers = [];
     
