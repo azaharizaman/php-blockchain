@@ -25,11 +25,10 @@
     }
   },
   "require-dev": {
-    "phpunit/phpunit": "^10.5",
-    "pestphp/pest": "^2.0"
+    "phpunit/phpunit": "^10.5"
   },
   "scripts": {
-    "test": "vendor/bin/pest",
+    "test": "vendor/bin/phpunit",
     "integration-test": "vendor/bin/phpunit --testsuite integration || vendor/bin/phpunit tests/Integration || echo \"No integration tests found\"",
     "generate-docs": "php scripts/generate-driver-docs.php",
     "check-docs": "php scripts/check-driver-docs.php"
