@@ -11,6 +11,8 @@ use Blockchain\Exceptions\ConfigurationException;
 
 class SolanaDriver implements BlockchainDriverInterface
 {
+    private const LAMPORTS_PER_SOL = 1000000000;
+    
     protected ?Client $client = null;
     protected array $config = [];
 
@@ -57,7 +59,7 @@ class SolanaDriver implements BlockchainDriverInterface
             }
 
             // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
-            return ($data['result']['value'] ?? 0) / 1000000000;
+            return ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
             
         } catch (RequestException $e) {
             throw new \Exception('Failed to get balance: ' . $e->getMessage());
