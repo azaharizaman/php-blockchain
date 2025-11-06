@@ -1,236 +1,320 @@
-# 🧾 Specification Document
+# PHP Blockchain Integration Layer - Product Requirements Document
 
-## Project: PHP Blockchain Integration Layer
+## Overview
 
-**Codename:** `php-blockchain-agent`
-**Author:** Azahari Zaman
-**Version:** 0.1 (Draft Spec)
-**License:** MIT
-**Language:** PHP 8.2+
-**Type:** Open Source SDK / Agentic-Ready Repository
+The PHP Blockchain Integration Layer is a unified, agentic-ready SDK that provides seamless integration with multiple blockchain networks through a consistent PHP interface. The project aims to democratize blockchain development by offering developers a simple, secure, and extensible way to interact with various blockchain networks without dealing with network-specific complexities.
 
----
+## Vision
 
-## 1. Overview
+To become the de facto standard PHP library for blockchain integration, enabling developers to build blockchain-powered applications with minimal friction while maintaining security, performance, and extensibility.
 
-### 1.1 Purpose
+## Mission
 
-This project provides a **modular, unified PHP interface** for integrating various **blockchain networks** — both EVM-based and non-EVM — into any PHP application.
-It aims to bridge the PHP ecosystem with modern blockchain APIs that lack native SDKs, offering an **agent-ready architecture** where new blockchain drivers can be automatically generated, tested, and integrated via AI or developer agents.
+Provide a modular, well-tested, and agentic-ready blockchain SDK that abstracts network complexities and enables rapid development of blockchain-integrated PHP applications.
 
----
+## Target Audience
 
-### 1.2 Objectives
+- **PHP Developers**: Backend developers looking to integrate blockchain functionality
+- **Blockchain Enthusiasts**: Developers wanting to experiment with multiple networks
+- **Enterprise Teams**: Organizations requiring reliable blockchain integration
+- **AI Agents**: Automated systems for maintaining and extending the SDK
 
-* Provide a **plug-and-play blockchain abstraction layer** for PHP developers.
-* Support major **JSON-RPC and REST-based blockchains** (e.g. Ethereum, Solana, Near, Polygon).
-* Enable **auto-generation** of new blockchain drivers through structured tasks or GitHub Copilot Agents.
-* Offer **unified method naming**, consistent across all supported networks.
-* Allow **Laravel and Symfony integration** via optional service providers.
+## Core Requirements
 
----
+### Functional Requirements
 
-## 2. Scope
+#### 1. Unified Interface
+- **REQ-001**: Single API for all supported blockchain networks
+- **REQ-002**: Consistent method signatures across all drivers
+- **REQ-003**: Network-agnostic error handling and exceptions
+- **REQ-004**: Unified configuration system for all drivers
 
-The package provides:
+#### 2. Driver Architecture
+- **REQ-005**: Modular driver system with hot-swappable implementations
+- **REQ-006**: Runtime driver registration and discovery
+- **REQ-007**: Driver validation and interface compliance checking
+- **REQ-008**: Support for both EVM and non-EVM networks
 
-1. **BlockchainManager** — main entry point handling connection and driver selection.
-2. **Driver Interface** — defines the standard contract for all blockchain implementations.
-3. **Driver Registry** — allows runtime registration of new blockchain drivers.
-4. **HTTP Client Layer** — uses Guzzle for interacting with blockchain APIs.
-5. **Utility Classes** — helpers for transactions, addresses, and format conversions.
-6. **CLI Tool (optional)** — quick commands for querying balances or sending transactions.
-7. **Agent Task Specs** — YAML task blueprints for driver generation, testing, and documentation updates.
+#### 3. Core Operations
+- **REQ-009**: Account balance retrieval across all networks
+- **REQ-010**: Transaction sending with network-specific optimizations
+- **REQ-011**: Transaction status and history queries
+- **REQ-012**: Token balance and transfer operations
+- **REQ-013**: Gas estimation and fee calculation
 
----
+#### 4. Security & Reliability
+- **REQ-014**: Secure key management and handling
+- **REQ-015**: Input validation and sanitization
+- **REQ-016**: Rate limiting and DDoS protection
+- **REQ-017**: Comprehensive error handling and logging
+- **REQ-018**: Connection pooling and retry mechanisms
 
-## 3. Architecture Overview
+#### 5. Agentic Capabilities
+- **REQ-019**: Automated driver generation from specifications
+- **REQ-020**: Self-maintaining documentation and tests
+- **REQ-021**: Automated code quality and security audits
+- **REQ-022**: Intelligent refactoring and optimization suggestions
 
-### 3.1 Components
+### Non-Functional Requirements
 
-| Component                   | Description                                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `BlockchainManager`         | Core orchestrator. Loads and initializes blockchain driver classes.                                          |
-| `BlockchainDriverInterface` | Defines contract for driver implementations (connect, getBalance, sendTransaction, etc).                     |
-| `Drivers/*`                 | Each blockchain driver lives in this namespace. Implements the interface and manages specific RPC endpoints. |
-| `Utils/*`                   | Shared helpers for data conversion, signing, and address validation.                                         |
-| `Exceptions/*`              | Structured error handling classes.                                                                           |
-| `Config/*`                  | Optional config files defining supported blockchains, keys, and defaults.                                    |
+#### Performance
+- **PERF-001**: Response times under 500ms for balance queries
+- **PERF-002**: Support for 1000+ concurrent connections
+- **PERF-003**: Memory usage under 50MB per driver instance
+- **PERF-004**: Efficient caching and connection pooling
 
----
+#### Security
+- **SEC-001**: No sensitive data logging or exposure
+- **SEC-002**: Secure default configurations
+- **SEC-003**: Protection against common blockchain attacks
+- **SEC-004**: Regular security audits and updates
 
-### 3.2 Example Flow
+#### Compatibility
+- **COMP-001**: PHP 8.2+ compatibility
+- **COMP-002**: PSR-4 autoloading compliance
+- **COMP-003**: PSR-12 coding standards adherence
+- **COMP-004**: Composer package management
 
+#### Quality
+- **QUAL-001**: 90%+ code coverage for all drivers
+- **QUAL-002**: Comprehensive integration and unit tests
+- **QUAL-003**: Automated linting and static analysis
+- **QUAL-004**: Performance benchmarking suite
+
+## Supported Networks
+
+### Phase 1 (Current)
+- **Solana**: High-performance blockchain with SPL token support
+- **Features**: Balance queries, SOL transfers, SPL token operations
+
+### Phase 2 (Q1 2024)
+- **Ethereum**: Smart contract platform with ERC-20/721 support
+- **Polygon**: Ethereum-compatible scaling solution
+- **Features**: EVM execution, gas optimization, contract interactions
+
+### Phase 3 (Q2 2024)
+- **Near Protocol**: Developer-friendly blockchain
+- **Avalanche**: High-throughput platform
+- **Features**: Cross-chain operations, advanced DeFi integrations
+
+### Phase 4 (Q3 2024)
+- **Binance Smart Chain**: High-performance EVM-compatible network
+- **Arbitrum**: Ethereum layer 2 scaling solution
+- **Features**: Multi-chain orchestration, advanced routing
+
+## Architecture
+
+### Core Components
+
+#### BlockchainManager
 ```php
-$blockchain = new BlockchainManager('solana', [
-    'endpoint' => 'https://api.mainnet-beta.solana.com'
-]);
-
-$balance = $blockchain->getBalance('YourPublicKeyHere');
-$txHash = $blockchain->sendTransaction($wallet, $recipient, $amount);
+$blockchain = new BlockchainManager('solana', $config);
+$balance = $blockchain->getBalance($address);
+$txHash = $blockchain->sendTransaction($from, $to, $amount);
 ```
 
----
-
-## 4. Driver Specification
-
-Each blockchain integration must:
-
-* Implement `BlockchainDriverInterface`
-* Reside in `src/Drivers/{BlockchainName}Driver.php`
-* Register itself in the driver registry
-* Contain the following core methods:
-
+#### BlockchainDriverInterface
 ```php
-interface BlockchainDriverInterface
-{
+interface BlockchainDriverInterface {
     public function connect(array $config): void;
     public function getBalance(string $address): float;
     public function sendTransaction(string $from, string $to, float $amount, array $options = []): string;
-    public function getTransaction(string $txHash): array;
-    public function getBlock(int|string $blockNumber): array;
+    // ... additional methods
 }
 ```
 
-Optional methods:
+#### Driver Registry
+- Runtime registration of blockchain drivers
+- Interface compliance validation
+- Default driver management
+- Configuration-driven instantiation
 
-* `estimateGas()`
-* `getTokenBalance()`
-* `getNetworkInfo()`
-
----
-
-## 5. Agentic Structure
-
-To make the repository **agentic**, the following files and conventions should exist:
-
-### 5.1 `.copilot/agent.yml`
-
-Defines the repository’s agent persona and abilities.
-
-```yaml
-name: PHP Blockchain Agent
-description: "Assists in extending blockchain integrations and maintaining SDK structure."
-capabilities:
-  - code-generation
-  - test-generation
-  - documentation-update
-tasks:
-  - id: create-new-driver
-    description: "Generate a new blockchain driver."
-    input:
-      - blockchain_name
-      - rpc_spec_url
-    output: "src/Drivers/{blockchain_name}Driver.php"
-  - id: update-readme
-    description: "Regenerate README.md with supported driver list."
-  - id: test-driver
-    description: "Run driver-specific test cases using PHPUnit."
+### Exception Hierarchy
+```
+BlockchainException (base)
+├── UnsupportedDriverException
+├── ConfigurationException
+├── ConnectionException
+├── TransactionException
+└── ValidationException
 ```
 
+## Development Roadmap
+
+### Milestone 1: Core Foundation (✅ Complete)
+- [x] Project structure and architecture
+- [x] BlockchainDriverInterface definition
+- [x] Basic exception hierarchy
+- [x] Driver registry implementation
+- [x] Solana driver (Phase 1)
+- [x] Comprehensive testing suite
+- [x] Agentic configuration setup
+
+### Milestone 2: Extended Network Support (In Progress)
+- [ ] Ethereum driver implementation
+- [ ] Polygon driver implementation
+- [ ] Enhanced gas estimation
+- [ ] Token standard support (ERC-20, ERC-721)
+- [ ] Cross-chain address validation
+
+### Milestone 3: Advanced Features (Planned)
+- [ ] Smart contract interaction layer
+- [ ] DeFi protocol integrations
+- [ ] Multi-signature wallet support
+- [ ] Hardware wallet integration
+- [ ] Transaction batching and optimization
+
+### Milestone 4: Enterprise Features (Future)
+- [ ] High-availability clustering
+- [ ] Advanced monitoring and alerting
+- [ ] Enterprise security features
+- [ ] Regulatory compliance tools
+- [ ] Performance analytics dashboard
+
+## Agentic Development Tasks
+
+### Automated Driver Generation
+- **Task**: `create-driver`
+- **Input**: Blockchain name, RPC spec URL, network type, features
+- **Output**: Complete driver implementation with tests and docs
+- **Trigger**: New blockchain integration request
+
+### Documentation Maintenance
+- **Task**: `update-readme`
+- **Input**: Sections to update
+- **Output**: Current README.md with latest information
+- **Trigger**: Driver additions, version changes, dependency updates
+
+### Quality Assurance
+- **Task**: `security-audit`
+- **Input**: Scope (single driver, all drivers, core system)
+- **Output**: Security audit report with recommendations
+- **Trigger**: Pull request creation, scheduled reviews
+
+### Performance Optimization
+- **Task**: `performance-optimize`
+- **Input**: Driver name, optimization targets
+- **Output**: Optimized driver implementation
+- **Trigger**: Performance benchmarks, user feedback
+
+## Testing Strategy
+
+### Unit Testing
+- PHPUnit framework with comprehensive test coverage
+- Mock HTTP responses for RPC calls
+- Edge case and error condition testing
+- Performance assertion testing
+
+### Integration Testing
+- Testnet-only integration tests
+- Real network interaction validation
+- Cross-driver compatibility testing
+- Load and stress testing
+
+### Quality Gates
+- 90%+ code coverage requirement
+- Static analysis with PHPStan
+- PSR compliance validation
+- Security vulnerability scanning
+
+## Security Considerations
+
+### Key Management
+- Environment variable configuration
+- Secure key derivation and handling
+- No sensitive data in logs or exceptions
+- Hardware security module support
+
+### Network Security
+- SSL/TLS encryption for all connections
+- Request signing and verification
+- Rate limiting and abuse prevention
+- Input validation and sanitization
+
+### Code Security
+- Regular dependency updates
+- Vulnerability scanning
+- Secure coding practices
+- Peer code review requirements
+
+## Performance Benchmarks
+
+### Target Metrics
+- Balance Query: < 200ms average response time
+- Transaction Send: < 500ms average confirmation time
+- Memory Usage: < 50MB per active driver
+- Concurrent Connections: 1000+ supported
+
+### Monitoring
+- Response time tracking
+- Error rate monitoring
+- Resource usage metrics
+- Network health indicators
+
+## Deployment & Distribution
+
+### Package Management
+- Composer package distribution
+- Semantic versioning compliance
+- Dependency management
+- Installation documentation
+
+### CI/CD Pipeline
+- Automated testing on all PHP versions
+- Code quality checks
+- Security scanning
+- Automated releases
+
+## Success Metrics
+
+### Adoption Metrics
+- Download count and growth rate
+- GitHub stars and forks
+- Community contribution rate
+- Integration success stories
+
+### Quality Metrics
+- Code coverage percentage
+- Open issue resolution time
+- Security vulnerability response time
+- Performance benchmark scores
+
+### Development Metrics
+- Agentic task completion rate
+- Automated test pass rate
+- Documentation freshness score
+- Code review turnaround time
+
+## Risk Assessment
+
+### Technical Risks
+- **Network Dependency**: Blockchain network outages affecting functionality
+- **API Changes**: Upstream RPC API modifications breaking drivers
+- **Security Vulnerabilities**: Cryptographic or protocol-level exploits
+- **Performance Degradation**: Network congestion affecting response times
+
+### Mitigation Strategies
+- **Network Resilience**: Multiple RPC endpoints, automatic failover
+- **API Monitoring**: Automated detection of API changes
+- **Security Reviews**: Regular audits and vulnerability assessments
+- **Performance Optimization**: Caching, connection pooling, request batching
+
+### Business Risks
+- **Competition**: Other blockchain SDKs gaining market share
+- **Regulatory Changes**: Blockchain regulations affecting usage
+- **Community Adoption**: Slow adoption rate among PHP developers
+
+### Mitigation Strategies
+- **Differentiation**: Agentic capabilities and ease of use
+- **Compliance**: Built-in regulatory compliance features
+- **Marketing**: Developer-focused marketing and education
+
+## Conclusion
+
+The PHP Blockchain Integration Layer represents a comprehensive solution for blockchain integration in PHP applications. By combining a clean architecture, extensive testing, and agentic capabilities, the project aims to provide developers with a reliable, secure, and extensible foundation for blockchain development.
+
+The agentic-ready design ensures that the library can evolve and adapt to new blockchain networks and features through automated processes, reducing maintenance overhead and enabling rapid innovation.
+
 ---
 
-## 6. Example Driver Blueprint (Solana)
-
-```php
-namespace Blockchain\Drivers;
-
-use Blockchain\Contracts\BlockchainDriverInterface;
-use GuzzleHttp\Client;
-
-class SolanaDriver implements BlockchainDriverInterface
-{
-    protected Client $client;
-
-    public function connect(array $config): void
-    {
-        $this->client = new Client(['base_uri' => $config['endpoint']]);
-    }
-
-    public function getBalance(string $address): float
-    {
-        $response = $this->client->post('', [
-            'json' => ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'getBalance', 'params' => [$address]]
-        ]);
-        $data = json_decode($response->getBody()->getContents(), true);
-        return $data['result']['value'] ?? 0;
-    }
-
-    public function sendTransaction(string $from, string $to, float $amount, array $options = []): string
-    {
-        // Placeholder for transaction logic
-        return 'tx_hash_placeholder';
-    }
-
-    public function getTransaction(string $txHash): array
-    {
-        // RPC call for Solana transaction details
-        return [];
-    }
-
-    public function getBlock(int|string $blockNumber): array
-    {
-        // Fetch block info
-        return [];
-    }
-}
-```
-
----
-
-## 7. Development Guidelines
-
-* Follow **PSR-4 autoloading** and **PSR-12 coding standards**.
-* Each new blockchain driver must include:
-
-  * Driver class
-  * PHPUnit test
-  * Driver registration in `DriverRegistry`
-  * Example usage in `/examples`
-* Documentation generated from `/docs/specs/*.md`
-
----
-
-## 8. Future Extensions
-
-* Smart contract interaction layer for EVM-based networks
-* Wallet keypair generation
-* Multi-signature transaction support
-* WebSocket-based live event listener
-* Integration with Laravel Filament plugin for blockchain dashboards
-
----
-
-## 9. Repo Automation Hooks
-
-* **Copilot Tasks:** Auto-generate drivers, tests, and docs.
-* **GitHub Actions:**
-
-  * Lint PHP code
-  * Run tests
-  * Publish package to Packagist
-  * Auto-update `README.md` with supported drivers list
-
----
-
-## 10. Example Folder Layout
-
-```
-/php-blockchain-agent
-├── .copilot/
-│   └── agent.yml
-├── src/
-│   ├── BlockchainManager.php
-│   ├── Contracts/BlockchainDriverInterface.php
-│   ├── Drivers/
-│   │   └── SolanaDriver.php
-│   ├── Registry/DriverRegistry.php
-│   ├── Utils/
-│   ├── Exceptions/
-│   └── Config/
-├── tests/
-│   └── SolanaDriverTest.php
-├── composer.json
-├── README.md
-└── LICENSE
-```
+*This PRD is maintained automatically through the project's agentic capabilities. Last updated: $(date)*

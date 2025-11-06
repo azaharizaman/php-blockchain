@@ -1,0 +1,43 @@
+{
+  "name": "azaharizaman/php-blockchain-agent",
+  "description": "An open-source PHP package providing a unified blockchain integration layer with agentic capabilities.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Azahari Zaman",
+      "email": "youremail@example.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "guzzlehttp/guzzle": "^7.8",
+    "symfony/console": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Blockchain\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Blockchain\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5"
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit",
+    "integration-test": "vendor/bin/phpunit --testsuite integration || vendor/bin/phpunit tests/Integration || echo \"No integration tests found\"",
+    "generate-docs": "php scripts/generate-driver-docs.php",
+    "check-docs": "php scripts/check-driver-docs.php"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "1.0.x-dev"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
