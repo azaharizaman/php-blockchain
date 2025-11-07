@@ -308,7 +308,6 @@ class ConfigLoader
      * - numeric strings -> int or float
      * - other strings -> returned as-is
      *
-     * Note: Requires PHP 8.0+ for mixed return type.
      *
      * @param string $value Environment variable value
      * @return string|int|float|bool Parsed value (string, int, float, or bool)
