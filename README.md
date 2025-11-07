@@ -206,35 +206,112 @@ $decoded = Serializer::fromBase64($encoded);
 - Throws `JsonException` for invalid JSON
 - Throws `InvalidArgumentException` for invalid Base64
 
-### HttpClientAdapter
+### GuzzleAdapter
 
-Provides a simplified HTTP client interface with Guzzle integration:
+Provides a centralized HTTP client adapter that implements the `HttpClientAdapter` interface. This adapter standardizes HTTP operations across all blockchain drivers with consistent error handling and configuration.
 
 ```php
-use Blockchain\Utils\HttpClientAdapter;
+use Blockchain\Transport\GuzzleAdapter;
 use GuzzleHttp\Client;
 
-// Using default client (30 second timeout, JSON headers)
-$adapter = new HttpClientAdapter();
+// Using default configuration (30s timeout, JSON headers, SSL verification)
+$adapter = new GuzzleAdapter();
 
 // Make GET request
 $data = $adapter->get('https://api.example.com/data');
 
-// Make POST request
+// Make POST request with JSON data
 $result = $adapter->post('https://api.example.com/submit', [
     'name' => 'Alice',
     'amount' => 100
 ]);
 
-// Using custom Guzzle client
-$client = new Client(['timeout' => 60]);
-$adapter = new HttpClientAdapter($client);
+// Using custom configuration
+$adapter = new GuzzleAdapter(null, [
+    'timeout' => 60,
+    'verify' => false, // Disable SSL verification (not recommended for production)
+]);
+
+// Set custom headers
+$adapter->setDefaultHeader('Authorization', 'Bearer token123');
+
+// Adjust timeout
+$adapter->setTimeout(120); // 2 minutes
+```
+
+**Integration with Drivers:**
+
+The GuzzleAdapter can be injected into blockchain drivers for better testability and control:
+
+```php
+use Blockchain\Drivers\SolanaDriver;
+use Blockchain\Transport\GuzzleAdapter;
+
+// Create adapter with custom config
+$adapter = new GuzzleAdapter(null, ['timeout' => 60]);
+
+// Inject into driver
+$driver = new SolanaDriver($adapter);
+$driver->connect(['endpoint' => 'https://api.mainnet-beta.solana.com']);
+
+$balance = $driver->getBalance('address');
+```
+
+**Testing with MockHandler:**
+
+The adapter supports Guzzle's MockHandler for unit testing without real network calls:
+
+```php
+use Blockchain\Transport\GuzzleAdapter;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+
+// Create mock responses
+$mockHandler = new MockHandler([
+    new Response(200, [], json_encode(['status' => 'success', 'data' => [...]])),
+    new Response(404, [], json_encode(['error' => 'Not found'])),
+]);
+
+$handlerStack = HandlerStack::create($mockHandler);
+$client = new Client(['handler' => $handlerStack]);
+$adapter = new GuzzleAdapter($client);
+
+// Now requests will use mocked responses
+$result = $adapter->get('https://api.example.com/test');
 ```
 
 **Error Handling:**
-- Converts Guzzle exceptions to `ConfigurationException`
-- Automatically parses JSON responses
-- Provides detailed error messages with HTTP status codes
+
+The GuzzleAdapter automatically maps Guzzle HTTP exceptions to blockchain exceptions:
+
+| Guzzle Exception | Blockchain Exception | Use Case |
+|------------------|---------------------|----------|
+| `ConnectException` | `ConfigurationException` | Network errors, timeouts, DNS failures |
+| `ClientException` (4xx) | `ValidationException` | Bad requests, authentication errors |
+| `ServerException` (5xx) | `TransactionException` | Server errors, service unavailable |
+
+All exceptions preserve the original exception in the chain for debugging:
+
+```php
+try {
+    $data = $adapter->get('https://api.example.com/data');
+} catch (\Blockchain\Exceptions\ConfigurationException $e) {
+    echo $e->getMessage(); // "Network connection failed: ..."
+    $original = $e->getPrevious(); // Original Guzzle exception
+}
+```
+
+**Configuration Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `timeout` | 30 | Request timeout in seconds |
+| `connect_timeout` | 10 | Connection timeout in seconds |
+| `verify` | true | Enable SSL certificate verification |
+| `headers` | JSON headers | Default headers for all requests |
+| `http_errors` | false | Manual error handling (adapter controls exceptions) |
 
 ### ConfigLoader
 
@@ -468,6 +545,7 @@ copilot task update-readme
 │   ├── BlockchainManager.php     # Main entry point
 │   ├── Contracts/               # Interfaces
 │   ├── Drivers/                 # Blockchain implementations
+│   ├── Transport/               # HTTP client adapters
 │   ├── Registry/                # Driver registry
 │   ├── Utils/                   # Helper classes
 │   ├── Exceptions/              # Custom exceptions
@@ -477,6 +555,21 @@ copilot task update-readme
 └── README.md            # Documentation
 ```
 
+### Layer Responsibilities
+
+- **Transport Layer** (`src/Transport/`): Centralized HTTP client handling
+  - `HttpClientAdapter` - Interface for HTTP operations
+  - `GuzzleAdapter` - Guzzle-based implementation with error mapping
+
+- **Driver Layer** (`src/Drivers/`): Blockchain-specific implementations
+  - Each driver implements `BlockchainDriverInterface`
+  - Uses `GuzzleAdapter` for HTTP communication
+  - Handles blockchain-specific logic
+
+- **Utility Layer** (`src/Utils/`): Common helper functions
+  - Address validation, serialization, caching
+  - Shared across all drivers
+
 ## 🔌 Creating Custom Drivers
 
 To create a new blockchain driver:
@@ -485,11 +578,39 @@ To create a new blockchain driver:
 
 ```php
 use Blockchain\Contracts\BlockchainDriverInterface;
+use Blockchain\Transport\GuzzleAdapter;
 
 class CustomDriver implements BlockchainDriverInterface
 {
-    public function connect(array $config): void { /* ... */ }
-    public function getBalance(string $address): float { /* ... */ }
+    private ?GuzzleAdapter $httpClient = null;
+    
+    public function __construct(?GuzzleAdapter $httpClient = null)
+    {
+        $this->httpClient = $httpClient;
+    }
+    
+    public function connect(array $config): void 
+    { 
+        // Create GuzzleAdapter if not provided
+        if ($this->httpClient === null) {
+            $this->httpClient = new GuzzleAdapter(null, [
+                'base_uri' => $config['endpoint'],
+                'timeout' => $config['timeout'] ?? 30,
+            ]);
+        }
+    }
+    
+    public function getBalance(string $address): float 
+    { 
+        // Use $this->httpClient->get() or ->post()
+        $data = $this->httpClient->post('/', [
+            'method' => 'getBalance',
+            'params' => [$address]
+        ]);
+        
+        return (float) $data['result'];
+    }
+    
     public function sendTransaction(string $from, string $to, float $amount, array $options = []): string { /* ... */ }
     public function getTransaction(string $txHash): array { /* ... */ }
     public function getBlock(int|string $blockNumber): array { /* ... */ }
@@ -500,6 +621,12 @@ class CustomDriver implements BlockchainDriverInterface
     public function getNetworkInfo(): ?array { /* ... */ }
 }
 ```
+
+**Benefits of using GuzzleAdapter:**
+- Automatic error handling and exception mapping
+- Consistent HTTP configuration across all drivers
+- Easy testing with MockHandler
+- JSON request/response handling built-in
 
 2. **Register the driver**:
 
