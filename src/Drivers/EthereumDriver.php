@@ -224,20 +224,51 @@ class EthereumDriver implements BlockchainDriverInterface
     }
 
     /**
-     * Estimate gas for a transaction (stub).
+     * Estimate gas for a transaction.
+     *
+     * Calls eth_estimateGas JSON-RPC method to estimate the gas required for a transaction.
+     * Applies a 1.2x safety buffer to the estimate. Falls back to heuristic estimates
+     * if the RPC call fails.
      *
      * @param string $from The sender's blockchain address
      * @param string $to The recipient's blockchain address
      * @param float $amount The amount to transfer in ETH
-     * @param array<string,mixed> $options Additional transaction options
+     * @param array<string,mixed> $options Additional transaction options (e.g., 'data' for contract calls)
      * @throws ConfigurationException If the driver is not connected
-     * @return int|null Estimated gas units, or null (not yet implemented)
+     * @return int|null Estimated gas units with safety buffer applied
      */
     public function estimateGas(string $from, string $to, float $amount, array $options = []): ?int
     {
-        // TODO: TASK-004 - Implement gas estimation
-        // This will use eth_estimateGas RPC method
-        return null;
+        $this->ensureConnected();
+
+        try {
+            // Build transaction object for eth_estimateGas
+            $transaction = [
+                'from' => $from,
+                'to' => $to,
+                'value' => $this->ethToWei($amount),
+            ];
+
+            // Add optional data field for contract interactions
+            if (isset($options['data'])) {
+                $transaction['data'] = $options['data'];
+            }
+
+            // Call eth_estimateGas
+            $gasHex = $this->rpcCall('eth_estimateGas', [$transaction]);
+
+            // Convert hex result to integer
+            $gasEstimate = $this->hexToInt($gasHex);
+
+            // Apply 1.2x safety buffer
+            return (int) ($gasEstimate * 1.2);
+        } catch (\Exception $e) {
+            // Log warning (in production, use proper logger)
+            error_log("eth_estimateGas failed: {$e->getMessage()}. Using fallback heuristics.");
+
+            // Use fallback heuristics
+            return $this->estimateGasFallback($from, $to, $amount, $options);
+        }
     }
 
     /**
@@ -374,5 +405,66 @@ class EthereumDriver implements BlockchainDriverInterface
         if ($this->httpClient === null || empty($this->endpoint)) {
             throw new ConfigurationException('Ethereum driver is not connected. Please call connect() first.');
         }
+    }
+
+    /**
+     * Convert ETH amount to Wei in hexadecimal format.
+     *
+     * @param float $eth The amount in ETH
+     * @return string The amount in Wei as hex string with 0x prefix
+     */
+    private function ethToWei(float $eth): string
+    {
+        // Convert ETH to Wei (1 ETH = 10^18 Wei)
+        // Use bcmul for precision if available, otherwise use standard multiplication
+        if (function_exists('bcmul')) {
+            $wei = bcmul((string) $eth, '1000000000000000000', 0);
+        } else {
+            $wei = (string) ($eth * 1e18);
+            // Remove decimal point if present
+            $wei = explode('.', $wei)[0];
+        }
+
+        // Convert to hexadecimal
+        $hexWei = '0x' . dechex((int) $wei);
+
+        return $hexWei;
+    }
+
+    /**
+     * Estimate gas using fallback heuristics when RPC call fails.
+     *
+     * Provides conservative gas estimates based on transaction type:
+     * - Simple ETH transfer: 21,000 gas
+     * - ERC-20 transfer: 65,000 gas
+     * - Contract interaction: 100,000+ gas (based on data size)
+     *
+     * @param string $from The sender's blockchain address
+     * @param string $to The recipient's blockchain address
+     * @param float $amount The amount to transfer in ETH
+     * @param array<string,mixed> $options Additional transaction options
+     * @return int Conservative gas estimate
+     */
+    private function estimateGasFallback(string $from, string $to, float $amount, array $options = []): int
+    {
+        // Check if this is a contract interaction (has data field)
+        if (isset($options['data']) && !empty($options['data'])) {
+            $data = $options['data'];
+
+            // Check if it's an ERC-20 transfer (starts with 0xa9059cbb which is transfer function selector)
+            if (str_starts_with($data, '0xa9059cbb')) {
+                return 65000; // ERC-20 transfer
+            }
+
+            // For other contract interactions, estimate based on data size
+            // Remove 0x prefix and calculate bytes
+            $dataBytes = strlen(str_replace('0x', '', $data)) / 2;
+
+            // Base contract call + data cost (68 gas per byte for non-zero bytes)
+            return 100000 + (int) ($dataBytes * 68);
+        }
+
+        // Simple ETH transfer
+        return 21000;
     }
 }

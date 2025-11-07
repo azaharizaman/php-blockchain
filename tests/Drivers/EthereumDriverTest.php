@@ -306,10 +306,256 @@ class EthereumDriverTest extends TestCase
         $driver->sendTransaction('0xfrom', '0xto', 1.0);
     }
 
+    public function testEstimateGasSimpleTransfer(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x5208', // 21,000 gas
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            1.0
+        );
+
+        // Should return 21,000 * 1.2 = 25,200
+        $this->assertEquals(25200, $gasEstimate);
+    }
+
+    public function testEstimateGasContractCall(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas with higher estimate for contract call
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0xea60', // 60,000 gas
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC contract
+            0.0,
+            ['data' => '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890']
+        );
+
+        // Should return 60,000 * 1.2 = 72,000
+        $this->assertEquals(72000, $gasEstimate);
+    }
+
+    public function testEstimateGasFallbackSimpleTransfer(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas with error
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => ['message' => 'Execution reverted'],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            1.0
+        );
+
+        // Should return fallback estimate for simple transfer: 21,000
+        $this->assertEquals(21000, $gasEstimate);
+    }
+
+    public function testEstimateGasFallbackERC20Transfer(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas with error
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => ['message' => 'Insufficient funds'],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        // ERC-20 transfer has data starting with 0xa9059cbb (transfer function selector)
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            0.0,
+            ['data' => '0xa9059cbb0000000000000000000000001234567890123456789012345678901234567890']
+        );
+
+        // Should return fallback estimate for ERC-20 transfer: 65,000
+        $this->assertEquals(65000, $gasEstimate);
+    }
+
+    public function testEstimateGasWithZeroAmount(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x5208', // 21,000 gas
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            0.0
+        );
+
+        // Should still estimate gas correctly
+        $this->assertEquals(25200, $gasEstimate);
+    }
+
+    public function testEstimateGasWithLargeAmount(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x5208', // 21,000 gas (same for any amount)
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            1000.0
+        );
+
+        // Should return same gas estimate regardless of amount
+        $this->assertEquals(25200, $gasEstimate);
+    }
+
+    public function testEstimateGasFallbackWithLargeContractData(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_estimateGas with error
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => ['message' => 'Gas estimation failed'],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        // Large contract data (not ERC-20 transfer)
+        // 200 bytes of data = 100 hex characters (without 0x)
+        $largeData = '0x' . str_repeat('1234567890abcdef', 25); // 400 hex chars = 200 bytes
+
+        $gasEstimate = $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            0.0,
+            ['data' => $largeData]
+        );
+
+        // Should return base + data cost: 100,000 + (200 * 68) = 113,600
+        $this->assertEquals(113600, $gasEstimate);
+    }
+
     public function testEstimateGasReturnsNull(): void
     {
         $result = $this->driver->estimateGas('0xfrom', '0xto', 1.0);
-        $this->assertNull($result);
+        $this->assertIsInt($result);
     }
 
     public function testGetTokenBalanceReturnsNull(): void
