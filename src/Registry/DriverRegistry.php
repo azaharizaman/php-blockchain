@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Blockchain\Registry;
 
+use Blockchain\Exceptions\ValidationException;
 use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Exceptions\UnsupportedDriverException;
-use Blockchain\Exceptions\ValidationException;
 
 class DriverRegistry
 {
-    /**
-     * @var array<string,class-string<BlockchainDriverInterface>>
-     */
+    /** @var array<string,string> */
     private array $drivers = [];
 
     public function __construct()
@@ -56,7 +54,13 @@ class DriverRegistry
             throw new UnsupportedDriverException("Driver '{$name}' is not registered.");
         }
 
-        return $this->drivers[$name];
+        /** @var class-string<BlockchainDriverInterface> $driverClass */
+        $driverClass = $this->drivers[$name];
+
+        /** @var BlockchainDriverInterface $instance */
+        $instance = new $driverClass();
+
+        return $instance;
     }
 
     /**
@@ -74,6 +78,9 @@ class DriverRegistry
      * Get all registered driver names.
      *
      * @return array<int,string> List of registered driver names
+     */
+    /**
+     * @return string[]
      */
     public function getRegisteredDrivers(): array
     {

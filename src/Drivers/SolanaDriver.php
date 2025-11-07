@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace Blockchain\Drivers;
 
-use Blockchain\Contracts\BlockchainDriverInterface;
-use Blockchain\Exceptions\ConfigurationException;
-use Blockchain\Transport\GuzzleAdapter;
+use GuzzleHttp\Client;
 use Blockchain\Utils\CachePool;
+use Blockchain\Transport\GuzzleAdapter;
+use Blockchain\Exceptions\ConfigurationException;
+use Blockchain\Contracts\BlockchainDriverInterface;
 
 class SolanaDriver implements BlockchainDriverInterface
 {
     private const LAMPORTS_PER_SOL = 1000000000;
 
     protected ?GuzzleAdapter $httpClient = null;
+    protected ?Client $client = null;
+    /** @var array<string,mixed> */
     protected array $config = [];
     protected CachePool $cache;
 
@@ -31,6 +34,9 @@ class SolanaDriver implements BlockchainDriverInterface
 
     /**
      * Connect to the Solana network with the given configuration.
+     */
+    /**
+     * @param array<string,mixed> $config
      */
     public function connect(array $config): void
     {
@@ -53,6 +59,9 @@ class SolanaDriver implements BlockchainDriverInterface
 
     /**
      * Get the balance of a Solana address.
+     */
+    /**
+     * @param string $address
      */
     public function getBalance(string $address): float
     {
@@ -89,6 +98,9 @@ class SolanaDriver implements BlockchainDriverInterface
     /**
      * Send a transaction (placeholder implementation).
      */
+    /**
+     * @param array<string,mixed> $options
+     */
     public function sendTransaction(string $from, string $to, float $amount, array $options = []): string
     {
         $this->ensureConnected();
@@ -104,6 +116,9 @@ class SolanaDriver implements BlockchainDriverInterface
 
     /**
      * Get transaction details by signature.
+     */
+    /**
+     * @return array<string,mixed>
      */
     public function getTransaction(string $txHash): array
     {
@@ -142,6 +157,9 @@ class SolanaDriver implements BlockchainDriverInterface
     /**
      * Get block information by slot number.
      */
+    /**
+     * @return array<string,mixed>
+     */
     public function getBlock(int|string $blockNumber): array
     {
         $this->ensureConnected();
@@ -178,6 +196,9 @@ class SolanaDriver implements BlockchainDriverInterface
 
     /**
      * Estimate gas for a transaction (not applicable to Solana).
+     */
+    /**
+     * @param array<string,mixed> $options
      */
     public function estimateGas(string $from, string $to, float $amount, array $options = []): ?int
     {
@@ -223,6 +244,9 @@ class SolanaDriver implements BlockchainDriverInterface
 
     /**
      * Get Solana network information.
+     */
+    /**
+     * @return array<string,mixed>|null
      */
     public function getNetworkInfo(): ?array
     {

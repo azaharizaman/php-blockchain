@@ -47,7 +47,7 @@ class SolanaDriverTest extends TestCase
     {
         // Mock HTTP responses
         $mockHandler = new MockHandler([
-            new Response(200, [], json_encode([
+            new Response(200, [], (string) json_encode([
                 'jsonrpc' => '2.0',
                 'result' => ['value' => 1000000000], // 1 SOL in lamports
                 'id' => 1
@@ -71,7 +71,7 @@ class SolanaDriverTest extends TestCase
     {
         // Mock HTTP responses with error
         $mockHandler = new MockHandler([
-            new Response(200, [], json_encode([
+            new Response(200, [], (string) json_encode([
                 'jsonrpc' => '2.0',
                 'error' => ['message' => 'Invalid address'],
                 'id' => 1
@@ -94,7 +94,7 @@ class SolanaDriverTest extends TestCase
     public function testGetTransactionSuccess(): void
     {
         $mockHandler = new MockHandler([
-            new Response(200, [], json_encode([
+            new Response(200, [], (string) json_encode([
                 'jsonrpc' => '2.0',
                 'result' => [
                     'slot' => 123456,

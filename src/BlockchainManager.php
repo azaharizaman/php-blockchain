@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace Blockchain;
 
+use Blockchain\Config\ConfigLoader;
 use Blockchain\Registry\DriverRegistry;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Exceptions\UnsupportedDriverException;
-use Blockchain\Config\ConfigLoader;
 
 /**
- * BlockchainManager orchestrates driver lifecycle and provides a unified API.
+ * BlockchainManager constructor.
  *
- * This class manages multiple blockchain drivers, allowing for driver switching
- * and providing a consistent interface for blockchain operations across
- * different blockchain networks.
+ * Supports multiple initialization patterns for backward compatibility:
+ * - New pattern: new BlockchainManager($registry) or new BlockchainManager()
+ * - Old pattern: new BlockchainManager('driver_name', $config)
+ *
+ * @param string|DriverRegistry|null $driverNameOrRegistry Driver name (string) for backward compatibility, or DriverRegistry instance, or null
+ * @param array<string,mixed> $config Driver configuration (only used with driver name pattern)
+ * @throws UnsupportedDriverException If driver name is invalid
  */
+
 class BlockchainManager implements BlockchainDriverInterface
 {
     private ?BlockchainDriverInterface $currentDriver = null;
@@ -28,27 +33,16 @@ class BlockchainManager implements BlockchainDriverInterface
     
     private DriverRegistry $registry;
 
-    /**
-     * BlockchainManager constructor.
-     *
-     * Supports multiple initialization patterns for backward compatibility:
-     * - New pattern: new BlockchainManager($registry) or new BlockchainManager()
-     * - Old pattern: new BlockchainManager('driver_name', $config)
-     *
-     * @param string|DriverRegistry|null $driverNameOrRegistry Driver name (string) for backward compatibility, or DriverRegistry instance, or null
-     * @param array<string,mixed> $config Driver configuration (only used with driver name pattern)
-     * @throws UnsupportedDriverException If driver name is invalid
-     */
-    public function __construct(string|DriverRegistry|null $driverNameOrRegistry = null, array $config = [])
+    public function __construct(?string $driverName = null, array $config = [])
     {
         // Handle different constructor patterns
-        if ($driverNameOrRegistry instanceof DriverRegistry) {
+        if ($driverName instanceof DriverRegistry) {
             // New pattern: DriverRegistry provided
-            $this->registry = $driverNameOrRegistry;
-        } elseif (is_string($driverNameOrRegistry)) {
+            $this->registry = $driverName;
+        } elseif (is_string($driverName)) {
             // Old pattern: driver name provided for backward compatibility
             $this->registry = new DriverRegistry();
-            $this->setDriver($driverNameOrRegistry, $config);
+            $this->setDriver($driverName, $config);
         } else {
             // No arguments or null provided
             $this->registry = new DriverRegistry();
@@ -64,26 +58,29 @@ class BlockchainManager implements BlockchainDriverInterface
      * @throws UnsupportedDriverException If driver is not registered
      * @throws \Blockchain\Exceptions\ValidationException If configuration is invalid
      */
-    public function setDriver(string $name, array $config): self
+    /**
+     * @param array<string,mixed> $config
+     */
+    public function setDriver(string $driverName, array $config = []): void
     {
-        if (!$this->registry->hasDriver($name)) {
-            throw new UnsupportedDriverException("Driver '{$name}' is not supported.");
+        if (!$this->registry->hasDriver($driverName)) {
+            throw new UnsupportedDriverException("Driver '{$driverName}' is not supported.");
         }
 
         // Validate configuration before using it
-        ConfigLoader::validateConfig($config, $name);
+        ConfigLoader::validateConfig($config, $driverName);
 
-        if (isset($this->drivers[$name])) {
+        if (isset($this->drivers[$driverName])) {
             // Driver already loaded, just switch to it
-            $this->currentDriver = $this->drivers[$name];
+            $this->currentDriver = $this->drivers[$driverName];
             return $this;
         }
-        
-        $driverClass = $this->registry->getDriver($name);
+
+        $driverClass = $this->registry->getDriver($driverName);
         $driver = new $driverClass();
         $driver->connect($config);
-        
-        $this->drivers[$name] = $driver;
+
+        $this->drivers[$driverName] = $driver;
         $this->currentDriver = $driver;
         
         return $this;
@@ -143,6 +140,9 @@ class BlockchainManager implements BlockchainDriverInterface
      * @return string Transaction hash
      * @throws ConfigurationException If no driver is set
      */
+    /**
+     * @param array<string,mixed> $options
+     */
     public function sendTransaction(string $from, string $to, float $amount, array $options = []): string
     {
         $this->ensureDriverIsSet();
@@ -156,10 +156,13 @@ class BlockchainManager implements BlockchainDriverInterface
      * @return array<string,mixed> Transaction details
      * @throws ConfigurationException If no driver is set
      */
-    public function getTransaction(string $hash): array
+    /**
+     * @return array<string,mixed>
+     */
+    public function getTransaction(string $txHash): array
     {
         $this->ensureDriverIsSet();
-        return $this->currentDriver->getTransaction($hash);
+        return $this->currentDriver->getTransaction($txHash);
     }
 
     /**
@@ -169,10 +172,13 @@ class BlockchainManager implements BlockchainDriverInterface
      * @return array<string,mixed> Block information
      * @throws ConfigurationException If no driver is set
      */
-    public function getBlock(int|string $blockIdentifier): array
+    /**
+     * @return array<string,mixed>
+     */
+    public function getBlock(int|string $blockNumber): array
     {
         $this->ensureDriverIsSet();
-        return $this->currentDriver->getBlock($blockIdentifier);
+        return $this->currentDriver->getBlock($blockNumber);
     }
 
     /**
@@ -184,6 +190,9 @@ class BlockchainManager implements BlockchainDriverInterface
      * @param array<string,mixed> $options Additional options
      * @return int|null Estimated gas units
      * @throws ConfigurationException If no driver is set
+     */
+    /**
+     * @param array<string,mixed> $options
      */
     public function estimateGas(string $from, string $to, float $amount, array $options = []): ?int
     {
@@ -211,6 +220,9 @@ class BlockchainManager implements BlockchainDriverInterface
      * @return array<string,mixed>|null Network information
      * @throws ConfigurationException If no driver is set
      */
+    /**
+     * @return array<string,mixed>|null
+     */
     public function getNetworkInfo(): ?array
     {
         $this->ensureDriverIsSet();
@@ -231,6 +243,9 @@ class BlockchainManager implements BlockchainDriverInterface
      * Get list of supported drivers.
      *
      * @return array<int,string> List of registered driver names
+     */
+    /**
+     * @return string[]
      */
     public function getSupportedDrivers(): array
     {
