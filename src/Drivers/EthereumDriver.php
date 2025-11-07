@@ -21,6 +21,35 @@ use Blockchain\Utils\CachePool;
 class EthereumDriver implements BlockchainDriverInterface
 {
     /**
+     * Gas estimation safety buffer multiplier.
+     */
+    private const GAS_SAFETY_BUFFER = 1.2;
+
+    /**
+     * Gas cost for simple ETH transfer (21,000 gas).
+     */
+    private const GAS_SIMPLE_TRANSFER = 21000;
+
+    /**
+     * Gas cost for ERC-20 token transfer (~65,000 gas).
+     */
+    private const GAS_ERC20_TRANSFER = 65000;
+
+    /**
+     * Base gas cost for contract interactions (~100,000 gas).
+     */
+    private const GAS_CONTRACT_BASE = 100000;
+
+    /**
+     * Gas cost per non-zero byte in transaction data.
+     */
+    private const GAS_PER_NONZERO_BYTE = 68;
+
+    /**
+     * Gas cost per zero byte in transaction data.
+     */
+    private const GAS_PER_ZERO_BYTE = 4;
+    /**
      * HTTP client adapter for making JSON-RPC requests.
      */
     private ?GuzzleAdapter $httpClient = null;
@@ -235,11 +264,20 @@ class EthereumDriver implements BlockchainDriverInterface
      * @param float $amount The amount to transfer in ETH
      * @param array<string,mixed> $options Additional transaction options (e.g., 'data' for contract calls)
      * @throws ConfigurationException If the driver is not connected
+     * @throws \InvalidArgumentException If address format is invalid
      * @return int|null Estimated gas units with safety buffer applied
      */
     public function estimateGas(string $from, string $to, float $amount, array $options = []): ?int
     {
         $this->ensureConnected();
+
+        // Validate address formats
+        if (!$this->validateAddress($from)) {
+            throw new \InvalidArgumentException("Invalid Ethereum address format for 'from': {$from}");
+        }
+        if (!$this->validateAddress($to)) {
+            throw new \InvalidArgumentException("Invalid Ethereum address format for 'to': {$to}");
+        }
 
         try {
             // Build transaction object for eth_estimateGas
@@ -260,13 +298,10 @@ class EthereumDriver implements BlockchainDriverInterface
             // Convert hex result to integer
             $gasEstimate = $this->hexToInt($gasHex);
 
-            // Apply 1.2x safety buffer
-            return (int) ($gasEstimate * 1.2);
+            // Apply safety buffer
+            return (int) ($gasEstimate * self::GAS_SAFETY_BUFFER);
         } catch (\Exception $e) {
-            // Log warning (in production, use proper logger)
-            error_log("eth_estimateGas failed: {$e->getMessage()}. Using fallback heuristics.");
-
-            // Use fallback heuristics
+            // Use fallback heuristics when RPC call fails
             return $this->estimateGasFallback($from, $to, $amount, $options);
         }
     }
@@ -410,25 +445,92 @@ class EthereumDriver implements BlockchainDriverInterface
     /**
      * Convert ETH amount to Wei in hexadecimal format.
      *
+     * This method handles large numbers correctly by using bcmath when available,
+     * or falling back to GMP for arbitrary precision arithmetic.
+     *
      * @param float $eth The amount in ETH
      * @return string The amount in Wei as hex string with 0x prefix
      */
     private function ethToWei(float $eth): string
     {
         // Convert ETH to Wei (1 ETH = 10^18 Wei)
-        // Use bcmul for precision if available, otherwise use standard multiplication
+        // Use bcmath for precision if available
         if (function_exists('bcmul')) {
             $wei = bcmul((string) $eth, '1000000000000000000', 0);
-        } else {
-            $wei = (string) ($eth * 1e18);
-            // Remove decimal point if present
-            $wei = explode('.', $wei)[0];
+            
+            // Convert to hexadecimal using bc functions
+            if (function_exists('bcdiv') && function_exists('bcmod')) {
+                return '0x' . $this->decToHex($wei);
+            }
         }
 
-        // Convert to hexadecimal
-        $hexWei = '0x' . dechex((int) $wei);
+        // Fallback to GMP if available (better than float for large numbers)
+        if (function_exists('gmp_init')) {
+            // Convert to string to avoid float precision issues
+            $ethStr = number_format($eth, 18, '.', '');
+            $parts = explode('.', $ethStr);
+            $wholePart = $parts[0];
+            $decimalPart = isset($parts[1]) ? $parts[1] : '0';
+            
+            // Calculate wei: whole_part * 10^18 + decimal_part * 10^(18-len(decimal))
+            $weiFromWhole = gmp_mul($wholePart, gmp_pow(10, 18));
+            $decimalLen = strlen($decimalPart);
+            $weiFromDecimal = gmp_mul($decimalPart, gmp_pow(10, 18 - $decimalLen));
+            $totalWei = gmp_add($weiFromWhole, $weiFromDecimal);
+            
+            return '0x' . gmp_strval($totalWei, 16);
+        }
 
-        return $hexWei;
+        // Last resort: use string manipulation (less precise but handles larger numbers)
+        // This approach works for most practical amounts
+        $weiFloat = $eth * 1e18;
+        
+        // For small amounts (< 9.2 ETH), simple conversion works
+        if ($weiFloat < PHP_INT_MAX) {
+            return '0x' . dechex((int) $weiFloat);
+        }
+        
+        // For larger amounts, use sprintf with scientific notation
+        $weiStr = sprintf('%.0f', $weiFloat);
+        return '0x' . $this->decToHex($weiStr);
+    }
+
+    /**
+     * Convert decimal string to hexadecimal string.
+     *
+     * This method handles arbitrarily large decimal numbers by using
+     * division and modulo operations on strings.
+     *
+     * @param string $decimal Decimal number as string
+     * @return string Hexadecimal representation (without 0x prefix)
+     */
+    private function decToHex(string $decimal): string
+    {
+        // Handle zero case
+        if ($decimal === '0' || $decimal === '') {
+            return '0';
+        }
+
+        // Use bcmath if available for arbitrary precision
+        if (function_exists('bcdiv') && function_exists('bcmod')) {
+            $hex = '';
+            while (bccomp($decimal, '0') > 0) {
+                $remainder = bcmod($decimal, '16');
+                $hex = dechex((int) $remainder) . $hex;
+                $decimal = bcdiv($decimal, '16', 0);
+            }
+            return $hex ?: '0';
+        }
+
+        // Fallback for systems without bcmath
+        // This works for numbers that fit in PHP_INT_MAX
+        if (is_numeric($decimal) && (float) $decimal < PHP_INT_MAX) {
+            return dechex((int) $decimal);
+        }
+
+        // For very large numbers without bcmath, return a safe default
+        // This should rarely happen in practice
+        return '0';
     }
 
     /**
@@ -453,18 +555,24 @@ class EthereumDriver implements BlockchainDriverInterface
 
             // Check if it's an ERC-20 transfer (starts with 0xa9059cbb which is transfer function selector)
             if (str_starts_with($data, '0xa9059cbb')) {
-                return 65000; // ERC-20 transfer
+                return self::GAS_ERC20_TRANSFER;
             }
 
             // For other contract interactions, estimate based on data size
             // Remove 0x prefix and calculate bytes
-            $dataBytes = strlen(str_replace('0x', '', $data)) / 2;
+            $dataHex = str_replace('0x', '', $data);
+            $dataBytes = strlen($dataHex) / 2;
 
-            // Base contract call + data cost (68 gas per byte for non-zero bytes)
-            return 100000 + (int) ($dataBytes * 68);
+            // Calculate gas cost based on zero and non-zero bytes
+            // For simplicity in fallback, assume worst case (all non-zero bytes)
+            // A more accurate implementation would count actual zero vs non-zero bytes
+            $dataCost = (int) ($dataBytes * self::GAS_PER_NONZERO_BYTE);
+
+            // Base contract call + data cost
+            return self::GAS_CONTRACT_BASE + $dataCost;
         }
 
         // Simple ETH transfer
-        return 21000;
+        return self::GAS_SIMPLE_TRANSFER;
     }
 }

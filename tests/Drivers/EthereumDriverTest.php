@@ -552,10 +552,72 @@ class EthereumDriverTest extends TestCase
         $this->assertEquals(113600, $gasEstimate);
     }
 
-    public function testEstimateGasReturnsNull(): void
+    public function testEstimateGasWithoutConnection(): void
     {
-        $result = $this->driver->estimateGas('0xfrom', '0xto', 1.0);
-        $this->assertIsInt($result);
+        $this->expectException(ConfigurationException::class);
+        $this->expectExceptionMessage('Ethereum driver is not connected. Please call connect() first.');
+
+        $this->driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            1.0
+        );
+    }
+
+    public function testEstimateGasWithInvalidFromAddress(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Ethereum address format for 'from': invalid_from");
+
+        $driver->estimateGas(
+            'invalid_from',
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+            1.0
+        );
+    }
+
+    public function testEstimateGasWithInvalidToAddress(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid Ethereum address format for 'to': invalid_to");
+
+        $driver->estimateGas(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            'invalid_to',
+            1.0
+        );
     }
 
     public function testGetTokenBalanceReturnsNull(): void
