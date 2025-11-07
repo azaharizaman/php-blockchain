@@ -242,7 +242,7 @@ final class KeccakLib
         }
     }
 
-    private static function keccak32($in_raw, int $capacity, int $outputlength, $suffix, bool $raw_output): string {
+    private static function keccak32(string $in_raw, int $capacity, int $outputlength, int $suffix, bool $raw_output): string {
         $capacity /= 8;
 
         $inlen = mb_strlen($in_raw, self::ENCODING);
