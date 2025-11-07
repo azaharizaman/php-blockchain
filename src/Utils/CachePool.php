@@ -171,7 +171,7 @@ class CachePool
      */
     public static function generateKey(string $method, array $params): string
     {
-        $paramsHash = md5(serialize($params));
+        $paramsHash = hash('sha256', json_encode($params, JSON_THROW_ON_ERROR));
         return "blockchain:{$method}:{$paramsHash}";
     }
 }
