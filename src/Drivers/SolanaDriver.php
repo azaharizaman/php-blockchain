@@ -8,6 +8,7 @@ use Blockchain\Contracts\BlockchainDriverInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Blockchain\Exceptions\ConfigurationException;
+use Blockchain\Utils\CachePool;
 
 class SolanaDriver implements BlockchainDriverInterface
 {
@@ -15,6 +16,17 @@ class SolanaDriver implements BlockchainDriverInterface
 
     protected ?Client $client = null;
     protected array $config = [];
+    protected CachePool $cache;
+
+    /**
+     * Constructor to inject optional cache dependency.
+     *
+     * @param CachePool|null $cache Optional cache pool for caching responses
+     */
+    public function __construct(?CachePool $cache = null)
+    {
+        $this->cache = $cache ?? new CachePool();
+    }
 
     /**
      * Connect to the Solana network with the given configuration.
@@ -42,6 +54,15 @@ class SolanaDriver implements BlockchainDriverInterface
     {
         $this->ensureConnected();
 
+        // Generate cache key
+        $cacheKey = CachePool::generateKey('getBalance', ['address' => $address]);
+
+        // Check cache first
+        $cachedBalance = $this->cache->get($cacheKey);
+        if ($cachedBalance !== null) {
+            return $cachedBalance;
+        }
+
         try {
             $response = $this->client->post('', [
                 'json' => [
@@ -59,7 +80,12 @@ class SolanaDriver implements BlockchainDriverInterface
             }
 
             // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
-            return ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
+            $balance = ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
+
+            // Store in cache with default TTL
+            $this->cache->set($cacheKey, $balance);
+
+            return $balance;
         } catch (RequestException $e) {
             throw new \Exception('Failed to get balance: ' . $e->getMessage());
         }
@@ -88,6 +114,15 @@ class SolanaDriver implements BlockchainDriverInterface
     {
         $this->ensureConnected();
 
+        // Generate cache key
+        $cacheKey = CachePool::generateKey('getTransaction', ['txHash' => $txHash]);
+
+        // Check cache first
+        $cachedTransaction = $this->cache->get($cacheKey);
+        if ($cachedTransaction !== null) {
+            return $cachedTransaction;
+        }
+
         try {
             $response = $this->client->post('', [
                 'json' => [
@@ -107,7 +142,12 @@ class SolanaDriver implements BlockchainDriverInterface
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
-            return $data['result'] ?? [];
+            $transaction = $data['result'] ?? [];
+
+            // Store in cache with longer TTL for immutable transaction data
+            $this->cache->set($cacheKey, $transaction, 3600); // 1 hour
+
+            return $transaction;
         } catch (RequestException $e) {
             throw new \Exception('Failed to get transaction: ' . $e->getMessage());
         }
@@ -119,6 +159,15 @@ class SolanaDriver implements BlockchainDriverInterface
     public function getBlock(int|string $blockNumber): array
     {
         $this->ensureConnected();
+
+        // Generate cache key
+        $cacheKey = CachePool::generateKey('getBlock', ['blockNumber' => (int)$blockNumber]);
+
+        // Check cache first
+        $cachedBlock = $this->cache->get($cacheKey);
+        if ($cachedBlock !== null) {
+            return $cachedBlock;
+        }
 
         try {
             $response = $this->client->post('', [
@@ -139,7 +188,12 @@ class SolanaDriver implements BlockchainDriverInterface
                 throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
             }
 
-            return $data['result'] ?? [];
+            $block = $data['result'] ?? [];
+
+            // Store in cache with longer TTL for immutable block data
+            $this->cache->set($cacheKey, $block, 3600); // 1 hour
+
+            return $block;
         } catch (RequestException $e) {
             throw new \Exception('Failed to get block: ' . $e->getMessage());
         }
