@@ -106,6 +106,11 @@ class Abi
         // Remove 0x prefix if present
         $address = str_starts_with($address, '0x') ? substr($address, 2) : $address;
         
+        // Validate address length (should be 40 hex characters = 20 bytes)
+        if (strlen($address) !== 40) {
+            throw new \InvalidArgumentException("Invalid address length: expected 40 hex characters, got " . strlen($address));
+        }
+        
         // Pad to 32 bytes (64 hex characters)
         return str_pad($address, 64, '0', STR_PAD_LEFT);
     }
