@@ -126,6 +126,11 @@ class Abi
         // Convert to string for GMP operations
         $valueStr = (string) $value;
         
+        // Validate non-negative (uint256 is unsigned)
+        if (str_starts_with(ltrim($valueStr), '-')) {
+            throw new \InvalidArgumentException("uint256 cannot be negative: {$valueStr}");
+        }
+        
         // Convert to hex using GMP for large number support
         $hex = gmp_strval(gmp_init($valueStr, 10), 16);
         
@@ -147,8 +152,10 @@ class Abi
     /**
      * Encode a string parameter.
      *
-     * Strings in ABI are dynamic types: offset (32 bytes) + length (32 bytes) + data (padded to 32 bytes).
-     * For simplicity in single-parameter calls, we encode inline.
+     * Note: This simplified implementation encodes strings inline without offset encoding.
+     * It works correctly for single string parameters but may produce incorrect results
+     * when mixing strings with other parameters in multi-parameter function calls.
+     * Full dynamic type offset encoding is planned for a future release.
      *
      * @param string $value String value
      * @return string Encoded string: length + padded data
