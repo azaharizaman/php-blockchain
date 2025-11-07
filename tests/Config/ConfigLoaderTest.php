@@ -501,6 +501,9 @@ class ConfigLoaderTest extends TestCase
     private function createTempJsonConfig(array $config): string
     {
         $content = json_encode($config, JSON_PRETTY_PRINT);
+        if ($content === false) {
+            throw new \RuntimeException('Failed to encode JSON: ' . json_last_error_msg());
+        }
         return $this->createTempFile('config.json', $content);
     }
 
