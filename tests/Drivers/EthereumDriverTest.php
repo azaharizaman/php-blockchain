@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace Tests\Drivers;
 
 use PHPUnit\Framework\TestCase;
 use Blockchain\Drivers\EthereumDriver;
@@ -404,5 +404,343 @@ class EthereumDriverTest extends TestCase
 
         $this->assertEquals($balance1, $balance2);
         $this->assertEquals(1.0, $balance2);
+    }
+
+    public function testGetBalanceWithZeroBalance(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_getBalance with 0 balance
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
+
+        $this->assertEquals(0.0, $balance);
+    }
+
+    public function testGetBalanceWithLargeBalance(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_getBalance with large balance
+            // 1000 ETH = 1000 * 10^18 wei = 0xde0b6b3a7640000 * 1000 = 0x3635c9adc5dea00000
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x3635c9adc5dea00000', // 1000 ETH
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
+
+        $this->assertEquals(1000.0, $balance);
+    }
+
+    public function testGetTransactionWithNonExistent(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_getTransactionByHash with null (non-existent)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => null,
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $transaction = $driver->getTransaction('0xnonexistenthash');
+
+        $this->assertIsArray($transaction);
+        $this->assertEmpty($transaction);
+    }
+
+    public function testGetBlockWithNonExistent(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_getBlockByNumber with null (non-existent)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => null,
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $block = $driver->getBlock(999999999);
+
+        $this->assertIsArray($block);
+        $this->assertEmpty($block);
+    }
+
+    public function testGetBlockWithLatestTag(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_getBlockByHash with "latest" tag
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => [
+                    'number' => '0x123456',
+                    'hash' => '0xlatestblockhash',
+                    'timestamp' => '0x5f5e100',
+                    'transactions' => [],
+                    'parentHash' => '0xparent123'
+                ],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $block = $driver->getBlock('latest');
+
+        $this->assertIsArray($block);
+        $this->assertEquals('0xlatestblockhash', $block['hash']);
+    }
+
+    public function testConnectWithHttpEndpoint(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'http://localhost:8545']);
+
+        $this->assertTrue(true);
+    }
+
+    public function testConnectWithHttpsEndpoint(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->assertTrue(true);
+    }
+
+    public function testConnectWithWssEndpoint(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'wss://mainnet.infura.io/ws/v3/test']);
+
+        $this->assertTrue(true);
+    }
+
+    public function testRpcErrorWithDifferentErrorCodes(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response with error code -32000
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'Server error'
+                ],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Ethereum RPC Error: Server error');
+
+        $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
+    }
+
+    public function testRpcErrorWithInvalidParams(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response with error code -32602 (Invalid params)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => [
+                    'code' => -32602,
+                    'message' => 'Invalid params'
+                ],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Ethereum RPC Error: Invalid params');
+
+        $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
+    }
+
+    public function testMultipleSequentialCalls(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // First call - getBalance
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0xde0b6b3a7640000',
+                'id' => 1
+            ])),
+            // Second call - getTransaction
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => [
+                    'hash' => '0x123',
+                    'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                    'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                    'value' => '0xde0b6b3a7640000'
+                ],
+                'id' => 1
+            ])),
+            // Third call - getBlock
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => [
+                    'number' => '0x123456',
+                    'hash' => '0xblockhash',
+                    'timestamp' => '0x5f5e100',
+                    'transactions' => []
+                ],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        // Make multiple calls and verify they all work
+        $balance = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
+        $this->assertEquals(1.0, $balance);
+
+        $transaction = $driver->getTransaction('0x123');
+        $this->assertEquals('0x123', $transaction['hash']);
+
+        $block = $driver->getBlock(1193046);
+        $this->assertEquals('0xblockhash', $block['hash']);
     }
 }
