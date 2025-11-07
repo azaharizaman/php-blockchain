@@ -78,6 +78,7 @@ class GuzzleAdapter implements HttpClientAdapter
 
         // Create client if not provided
         if ($client === null) {
+            // http_errors set to false allows manual error handling for better control
             $this->client = new Client($this->config);
         } else {
             $this->client = $client;
