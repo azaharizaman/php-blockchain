@@ -158,8 +158,9 @@ class Abi
         $length = strlen($value);
         $hex = bin2hex($value);
         
-        // Pad to multiple of 32 bytes
-        $paddedHex = str_pad($hex, ceil($length / 32) * 64, '0', STR_PAD_RIGHT);
+        // Pad to next multiple of 32 bytes (each byte = 2 hex chars)
+        $paddedLength = (int) ceil($length / 32) * 32;
+        $paddedHex = str_pad($hex, $paddedLength * 2, '0', STR_PAD_RIGHT);
         
         // Return: length (32 bytes) + padded data
         return self::encodeUint256($length) . $paddedHex;
