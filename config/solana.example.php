@@ -10,10 +10,11 @@
 
 return [
     /**
-     * RPC URL (Required)
+     * RPC URL (Required - use either 'rpc_url' or 'endpoint')
      *
      * The endpoint URL for the Solana RPC node. This is the only
-     * required configuration parameter.
+     * required configuration parameter. You can use either 'rpc_url'
+     * (recommended) or 'endpoint' (for backward compatibility).
      *
      * Available networks:
      * - Mainnet Beta: https://api.mainnet-beta.solana.com
@@ -26,6 +27,7 @@ return [
      * - Helius: https://helius.dev
      */
     'rpc_url' => 'https://api.mainnet-beta.solana.com',
+    // Alternative: 'endpoint' => 'https://api.mainnet-beta.solana.com',
 
     /**
      * Timeout (Optional)

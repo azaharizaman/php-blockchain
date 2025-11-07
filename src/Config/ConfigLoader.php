@@ -157,10 +157,28 @@ class ConfigLoader
         $schema = self::getDriverSchema($driver);
         $errors = [];
 
-        // Check required fields
-        foreach ($schema['required'] as $field) {
-            if (!isset($config[$field]) && !array_key_exists($field, $config)) {
-                $errors[$field] = "Required field '{$field}' is missing";
+        // Check required fields (with OR logic for alternatives)
+        if (isset($schema['required'])) {
+            foreach ($schema['required'] as $requirement) {
+                // If requirement is an array, it's an OR condition (any one is required)
+                if (is_array($requirement)) {
+                    $hasAny = false;
+                    foreach ($requirement as $alternativeField) {
+                        if (isset($config[$alternativeField]) || array_key_exists($alternativeField, $config)) {
+                            $hasAny = true;
+                            break;
+                        }
+                    }
+                    if (!$hasAny) {
+                        $fieldNames = implode("' or '", $requirement);
+                        $errors['_required'] = "One of the following fields is required: '{$fieldNames}'";
+                    }
+                } else {
+                    // Single required field
+                    if (!isset($config[$requirement]) && !array_key_exists($requirement, $config)) {
+                        $errors[$requirement] = "Required field '{$requirement}' is missing";
+                    }
+                }
             }
         }
 
@@ -236,9 +254,16 @@ class ConfigLoader
     {
         $schemas = [
             'solana' => [
-                'required' => ['rpc_url'],
+                // Accept either 'rpc_url' or 'endpoint' (for backward compatibility)
+                'required' => [
+                    ['rpc_url', 'endpoint'], // OR condition - at least one is required
+                ],
                 'fields' => [
                     'rpc_url' => [
+                        'type' => 'string',
+                        'format' => 'url',
+                    ],
+                    'endpoint' => [
                         'type' => 'string',
                         'format' => 'url',
                     ],

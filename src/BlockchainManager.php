@@ -8,6 +8,7 @@ use Blockchain\Registry\DriverRegistry;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Exceptions\UnsupportedDriverException;
+use Blockchain\Config\ConfigLoader;
 
 /**
  * BlockchainManager orchestrates driver lifecycle and provides a unified API.
@@ -61,12 +62,16 @@ class BlockchainManager implements BlockchainDriverInterface
      * @param array<string,mixed> $config Driver configuration
      * @return self For fluent interface
      * @throws UnsupportedDriverException If driver is not registered
+     * @throws \Blockchain\Exceptions\ValidationException If configuration is invalid
      */
     public function setDriver(string $name, array $config): self
     {
         if (!$this->registry->hasDriver($name)) {
             throw new UnsupportedDriverException("Driver '{$name}' is not supported.");
         }
+
+        // Validate configuration before using it
+        ConfigLoader::validateConfig($config, $name);
 
         if (isset($this->drivers[$name])) {
             // Driver already loaded, just switch to it

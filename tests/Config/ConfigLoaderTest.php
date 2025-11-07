@@ -264,6 +264,20 @@ class ConfigLoaderTest extends TestCase
     }
 
     /**
+     * Test validateConfig accepts endpoint field for backward compatibility.
+     */
+    public function testValidateConfigAcceptsEndpointField(): void
+    {
+        $config = [
+            'endpoint' => 'https://api.mainnet-beta.solana.com',
+        ];
+
+        $result = ConfigLoader::validateConfig($config, 'solana');
+
+        $this->assertTrue($result);
+    }
+
+    /**
      * Test validateConfig with all optional Solana fields.
      */
     public function testValidateConfigWithAllSolanaFields(): void
@@ -289,7 +303,7 @@ class ConfigLoaderTest extends TestCase
         ];
 
         $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage("Required field 'rpc_url' is missing");
+        $this->expectExceptionMessage("One of the following fields is required: 'rpc_url' or 'endpoint'");
 
         ConfigLoader::validateConfig($config, 'solana');
     }
