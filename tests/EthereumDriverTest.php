@@ -108,7 +108,7 @@ class EthereumDriverTest extends TestCase
         $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid Ethereum address format');
+        $this->expectExceptionMessage('Invalid Ethereum address format: invalid_address');
 
         $driver->getBalance('invalid_address');
     }
