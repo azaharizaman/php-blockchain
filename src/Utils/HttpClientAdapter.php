@@ -103,8 +103,8 @@ class HttpClientAdapter
     public function post(string $url, array $data, array $options = []): array
     {
         try {
-            // Merge data into options
-            $options['json'] = $data;
+            // Merge data into options, preserving user-provided 'json' if present
+            $options = array_merge(['json' => $data], $options);
             
             $response = $this->client->post($url, $options);
             $body = (string) $response->getBody();
