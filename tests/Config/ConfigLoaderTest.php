@@ -50,9 +50,11 @@ class ConfigLoaderTest extends TestCase
         // Restore original environment variables
         foreach ($this->originalEnv as $key => $value) {
             if ($value === false) {
-                putenv($key . '='); // Properly unset with empty value
-                unset($_ENV[$key]);
+                // Variable didn't exist before - unset it
+                putenv($key); // Unset in putenv
+                unset($_ENV[$key]); // Unset in $_ENV
             } else {
+                // Restore original value
                 putenv("{$key}={$value}");
                 $_ENV[$key] = $value;
             }
