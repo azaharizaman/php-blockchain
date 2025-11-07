@@ -311,6 +311,112 @@ try {
 }
 ```
 
+### CachePool
+
+The CachePool provides an in-memory caching layer to reduce redundant blockchain API calls and improve performance:
+
+```php
+use Blockchain\Utils\CachePool;
+use Blockchain\Drivers\SolanaDriver;
+
+// Create a cache pool
+$cache = new CachePool();
+
+// Configure default TTL (time-to-live) in seconds
+$cache->setDefaultTtl(600); // 10 minutes
+
+// Basic cache operations
+$cache->set('my_key', 'my_value', 300); // Store with 5 minute TTL
+$value = $cache->get('my_key'); // Retrieve value
+$exists = $cache->has('my_key'); // Check if key exists
+$cache->delete('my_key'); // Remove specific key
+$cache->clear(); // Clear all cached items
+
+// Bulk operations
+$cache->setMultiple([
+    'key1' => 'value1',
+    'key2' => 'value2',
+], 300);
+
+$values = $cache->getMultiple(['key1', 'key2']);
+// Returns: ['key1' => 'value1', 'key2' => 'value2']
+
+// Generate deterministic cache keys
+$key = CachePool::generateKey('getBalance', ['address' => 'wallet123']);
+// Returns: "blockchain:getBalance:{hash}"
+```
+
+**Using Cache with Drivers:**
+
+Drivers automatically use caching when provided with a CachePool instance:
+
+```php
+use Blockchain\Utils\CachePool;
+use Blockchain\Drivers\SolanaDriver;
+
+// Create cache and driver
+$cache = new CachePool();
+$driver = new SolanaDriver($cache);
+
+// Configure the driver
+$driver->connect([
+    'endpoint' => 'https://api.mainnet-beta.solana.com'
+]);
+
+// First call hits the blockchain
+$balance1 = $driver->getBalance('address123'); // Network request
+
+// Second call uses cached value (no network request)
+$balance2 = $driver->getBalance('address123'); // From cache
+```
+
+**Cache Behavior:**
+
+- **Read Operations Cached**: `getBalance()`, `getTransaction()`, `getBlock()`
+- **Write Operations NOT Cached**: `sendTransaction()`
+- **Default TTL**: 300 seconds (5 minutes)
+- **Custom TTL per Operation**:
+  - Balance queries: 300 seconds (5 minutes)
+  - Transaction details: 3600 seconds (1 hour) - immutable data
+  - Block details: 3600 seconds (1 hour) - immutable data
+
+**When to Clear Cache:**
+
+```php
+// Clear cache after sending a transaction
+$driver->sendTransaction($from, $to, $amount);
+$cache->clear(); // Or delete specific keys
+
+// Clear specific address balance
+$key = CachePool::generateKey('getBalance', ['address' => 'wallet123']);
+$cache->delete($key);
+```
+
+**Advanced Usage:**
+
+```php
+use Blockchain\BlockchainManager;
+use Blockchain\Utils\CachePool;
+
+// Share cache across multiple drivers
+$cache = new CachePool();
+$cache->setDefaultTtl(600);
+
+// Use with BlockchainManager (requires manual driver instantiation)
+$solanaDriver = new Blockchain\Drivers\SolanaDriver($cache);
+
+// Register and use
+$registry = new Blockchain\Registry\DriverRegistry();
+$registry->registerDriverInstance('solana', $solanaDriver);
+```
+
+**Benefits:**
+
+- **Reduced API Calls**: Minimize requests to blockchain RPC endpoints
+- **Improved Performance**: Faster response times for repeated queries
+- **Cost Savings**: Lower usage of rate-limited or paid RPC services
+- **Network Resilience**: Serve cached data during temporary network issues
+
 ## 🧪 Testing
 
 Run the test suite:
