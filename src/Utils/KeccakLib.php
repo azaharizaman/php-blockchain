@@ -76,7 +76,7 @@ final class KeccakLib
                     $lo = $t[0];
                 }
 
-                $st[$j] =[
+                $st[$j] = [
                     (($hi << $n) | ($lo >> (32 - $n))) & (0xFFFFFFFF),
                     (($lo << $n) | ($hi >> (32 - $n))) & (0xFFFFFFFF)
                 ];
@@ -290,11 +290,11 @@ final class KeccakLib
 
         $out = '';
         for ($i = 0; $i < 25; $i++) {
-            $out .= $t = pack('v*', $st[$i][3],$st[$i][2], $st[$i][1], $st[$i][0]);
+            $out .= $t = pack('v*', $st[$i][3], $st[$i][2], $st[$i][1], $st[$i][0]);
         }
         $r = mb_substr($out, 0, intval($outputlength / 8), self::ENCODING);
 
-        return $raw_output ? $r: bin2hex($r);
+        return $raw_output ? $r : bin2hex($r);
     }
 
     private static function keccak($in_raw, int $capacity, int $outputlength, $suffix, bool $raw_output): string {
