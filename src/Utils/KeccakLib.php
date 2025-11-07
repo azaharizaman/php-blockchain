@@ -25,7 +25,7 @@ final class KeccakLib
     private static $keccakf_piln = [10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1];
     private static $x64 = (PHP_INT_SIZE === 8);
 
-    private static function keccakf64(&$st, $rounds): void {
+    private static function keccakf64(array &$st, int $rounds): void {
         $keccakf_rndc = [
             [0x00000000, 0x00000001], [0x00000000, 0x00008082], [0x80000000, 0x0000808a], [0x80000000, 0x80008000],
             [0x00000000, 0x0000808b], [0x00000000, 0x80000001], [0x80000000, 0x80008081], [0x80000000, 0x00008009],
