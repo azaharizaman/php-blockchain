@@ -151,6 +151,91 @@ $registry = $manager->getDriverRegistry();
 $registry->registerDriver('custom', CustomBlockchainDriver::class);
 ```
 
+## 🛠️ Utility Classes
+
+The package provides several utility classes to help with common blockchain operations:
+
+### AddressValidator
+
+Validates and normalizes blockchain addresses for different networks:
+
+```php
+use Blockchain\Utils\AddressValidator;
+
+// Validate Solana address
+$isValid = AddressValidator::isValid('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM', 'solana');
+// Returns: true
+
+// Validate with default network (solana)
+$isValid = AddressValidator::isValid('invalid123');
+// Returns: false
+
+// Normalize addresses (trim whitespace, lowercase hex addresses)
+$normalized = AddressValidator::normalize('  0x1234ABCD  ');
+// Returns: '0x1234abcd'
+```
+
+**Supported Networks:**
+- `solana` - Base58 encoded addresses (32-44 characters)
+- More networks coming soon
+
+### Serializer
+
+Handles data serialization and deserialization:
+
+```php
+use Blockchain\Utils\Serializer;
+
+// JSON serialization
+$data = ['name' => 'Alice', 'balance' => 100];
+$json = Serializer::toJson($data);
+// Returns: '{"name":"Alice","balance":100}'
+
+$decoded = Serializer::fromJson($json);
+// Returns: ['name' => 'Alice', 'balance' => 100]
+
+// Base64 encoding
+$encoded = Serializer::toBase64('Hello World');
+// Returns: 'SGVsbG8gV29ybGQ='
+
+$decoded = Serializer::fromBase64($encoded);
+// Returns: 'Hello World'
+```
+
+**Error Handling:**
+- Throws `JsonException` for invalid JSON
+- Throws `InvalidArgumentException` for invalid Base64
+
+### HttpClientAdapter
+
+Provides a simplified HTTP client interface with Guzzle integration:
+
+```php
+use Blockchain\Utils\HttpClientAdapter;
+use GuzzleHttp\Client;
+
+// Using default client (30 second timeout, JSON headers)
+$adapter = new HttpClientAdapter();
+
+// Make GET request
+$data = $adapter->get('https://api.example.com/data');
+
+// Make POST request
+$result = $adapter->post('https://api.example.com/submit', [
+    'name' => 'Alice',
+    'amount' => 100
+]);
+
+// Using custom Guzzle client
+$client = new Client(['timeout' => 60]);
+$adapter = new HttpClientAdapter($client);
+```
+
+**Error Handling:**
+- Converts Guzzle exceptions to `ConfigurationException`
+- Automatically parses JSON responses
+- Provides detailed error messages with HTTP status codes
+
 ## 🧪 Testing
 
 Run the test suite:
