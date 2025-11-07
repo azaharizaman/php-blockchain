@@ -297,7 +297,7 @@ final class KeccakLib
         return $raw_output ? $r : bin2hex($r);
     }
 
-    private static function keccak($in_raw, int $capacity, int $outputlength, $suffix, bool $raw_output): string {
+    private static function keccak(string $in_raw, int $capacity, int $outputlength, int $suffix, bool $raw_output): string {
         return self::$x64
             ? self::keccak64($in_raw, $capacity, $outputlength, $suffix, $raw_output)
             : self::keccak32($in_raw, $capacity, $outputlength, $suffix, $raw_output);
