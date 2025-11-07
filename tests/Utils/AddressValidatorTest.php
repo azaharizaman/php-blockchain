@@ -20,7 +20,7 @@ class AddressValidatorTest extends TestCase
      */
     public function testIsValidWithValidSolanaAddresses(): void
     {
-        // Valid 32-character Solana address
+        // Valid minimum length Solana address (32 characters)
         $this->assertTrue(
             AddressValidator::isValid('11111111111111111111111111111111', 'solana')
         );
