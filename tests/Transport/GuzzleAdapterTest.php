@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Blockchain\Tests\Utils;
+namespace Blockchain\Tests\Transport;
 
 use Blockchain\Exceptions\ConfigurationException;
-use Blockchain\Utils\HttpClientAdapter;
+use Blockchain\Exceptions\TransactionException;
+use Blockchain\Exceptions\ValidationException;
+use Blockchain\Transport\GuzzleAdapter;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
@@ -16,21 +19,21 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Test suite for HttpClientAdapter utility class.
+ * Test suite for GuzzleAdapter.
  *
  * Uses Guzzle MockHandler to test HTTP operations without real network calls.
  * This follows SEC-001 requirement for no network calls during unit tests.
  */
-class HttpClientAdapterTest extends TestCase
+class GuzzleAdapterTest extends TestCase
 {
     /**
      * Test constructor with default client.
      */
     public function testConstructorWithDefaultClient(): void
     {
-        $adapter = new HttpClientAdapter();
+        $adapter = new GuzzleAdapter();
 
-        $this->assertInstanceOf(HttpClientAdapter::class, $adapter);
+        $this->assertInstanceOf(GuzzleAdapter::class, $adapter);
     }
 
     /**
@@ -38,10 +41,25 @@ class HttpClientAdapterTest extends TestCase
      */
     public function testConstructorWithCustomClient(): void
     {
-        $client = new Client(['timeout' => 60]);
-        $adapter = new HttpClientAdapter($client);
+        $mockHandler = new MockHandler([
+            new Response(200, [], json_encode(['test' => 'data']))
+        ]);
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
 
-        $this->assertInstanceOf(HttpClientAdapter::class, $adapter);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->assertInstanceOf(GuzzleAdapter::class, $adapter);
+    }
+
+    /**
+     * Test constructor with custom configuration.
+     */
+    public function testConstructorWithCustomConfig(): void
+    {
+        $adapter = new GuzzleAdapter(null, ['timeout' => 60, 'verify' => false]);
+
+        $this->assertInstanceOf(GuzzleAdapter::class, $adapter);
     }
 
     /**
@@ -58,7 +76,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->get('https://api.example.com/data');
 
@@ -79,7 +97,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->get('https://api.example.com/search', [
             'query' => ['q' => 'test', 'limit' => 10]
@@ -95,21 +113,36 @@ class HttpClientAdapterTest extends TestCase
     public function testGetMethodWith404Error(): void
     {
         $mockHandler = new MockHandler([
-            new RequestException(
-                'Not Found',
-                new Request('GET', 'test'),
-                new Response(404, [], 'Not Found')
-            )
+            new Response(404, [], json_encode(['error' => 'Resource not found']))
         ]);
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
-        $this->expectException(ConfigurationException::class);
-        $this->expectExceptionMessageMatches('/HTTP request failed with status 404/');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/HTTP 404 error/');
 
         $adapter->get('https://api.example.com/notfound');
+    }
+
+    /**
+     * Test get() method with 400 error response.
+     */
+    public function testGetMethodWith400Error(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(400, [], json_encode(['error' => ['message' => 'Invalid parameters']]]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/Invalid parameters/');
+
+        $adapter->get('https://api.example.com/bad-request');
     }
 
     /**
@@ -118,25 +151,40 @@ class HttpClientAdapterTest extends TestCase
     public function testGetMethodWith500Error(): void
     {
         $mockHandler = new MockHandler([
-            new RequestException(
-                'Internal Server Error',
-                new Request('GET', 'test'),
-                new Response(500, [], 'Server Error')
-            )
+            new Response(500, [], json_encode(['message' => 'Internal server error'}))
         ]);
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
-        $this->expectException(ConfigurationException::class);
-        $this->expectExceptionMessageMatches('/HTTP request failed with status 500/');
+        $this->expectException(TransactionException::class);
+        $this->expectExceptionMessageMatches('/HTTP 500 error/');
 
         $adapter->get('https://api.example.com/error');
     }
 
     /**
-     * Test get() method with network error.
+     * Test get() method with 503 error response.
+     */
+    public function testGetMethodWith503Error(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(503, [], 'Service Unavailable')
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(TransactionException::class);
+        $this->expectExceptionMessageMatches('/HTTP 503 error/');
+
+        $adapter->get('https://api.example.com/unavailable');
+    }
+
+    /**
+     * Test get() method with network error (ConnectException).
      */
     public function testGetMethodWithNetworkError(): void
     {
@@ -149,10 +197,10 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $this->expectException(ConfigurationException::class);
-        $this->expectExceptionMessageMatches('/HTTP request failed/');
+        $this->expectExceptionMessageMatches('/Network connection failed/');
 
         $adapter->get('https://api.example.com/timeout');
     }
@@ -168,7 +216,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $this->expectException(ConfigurationException::class);
         $this->expectExceptionMessageMatches('/Invalid JSON response/');
@@ -190,7 +238,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->post('https://api.example.com/create', [
             'name' => 'Alice',
@@ -213,7 +261,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->post('https://api.example.com/ping', []);
 
@@ -232,7 +280,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->post('https://api.example.com/users', [
             'user' => [
@@ -254,19 +302,15 @@ class HttpClientAdapterTest extends TestCase
     public function testPostMethodWith400Error(): void
     {
         $mockHandler = new MockHandler([
-            new RequestException(
-                'Bad Request',
-                new Request('POST', 'test'),
-                new Response(400, [], 'Bad Request')
-            )
+            new Response(400, [], json_encode(['error' => 'Bad Request'}))
         ]);
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
-        $this->expectException(ConfigurationException::class);
-        $this->expectExceptionMessageMatches('/HTTP request failed with status 400/');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/HTTP 400 error/');
 
         $adapter->post('https://api.example.com/invalid', ['bad' => 'data']);
     }
@@ -285,10 +329,10 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $this->expectException(ConfigurationException::class);
-        $this->expectExceptionMessageMatches('/HTTP request failed/');
+        $this->expectExceptionMessageMatches('/Network connection failed/');
 
         $adapter->post('https://api.example.com/slow', ['data' => 'test']);
     }
@@ -304,7 +348,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $this->expectException(ConfigurationException::class);
         $this->expectExceptionMessageMatches('/Invalid JSON response/');
@@ -323,7 +367,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result = $adapter->post(
             'https://api.example.com/auth',
@@ -336,7 +380,7 @@ class HttpClientAdapterTest extends TestCase
     }
 
     /**
-     * Test that error messages preserve exception information.
+     * Test that exception preserves original exception.
      */
     public function testExceptionPreservesOriginalException(): void
     {
@@ -349,13 +393,13 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         try {
             $adapter->get('https://nonexistent.example.com');
             $this->fail('Expected ConfigurationException to be thrown');
         } catch (ConfigurationException $e) {
-            $this->assertStringContainsString('HTTP request failed', $e->getMessage());
+            $this->assertStringContainsString('Network connection failed', $e->getMessage());
             $this->assertInstanceOf(ConnectException::class, $e->getPrevious());
         }
     }
@@ -373,7 +417,7 @@ class HttpClientAdapterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
-        $adapter = new HttpClientAdapter($client);
+        $adapter = new GuzzleAdapter($client);
 
         $result1 = $adapter->get('https://api.example.com/1');
         $this->assertEquals(1, $result1['request']);
@@ -383,5 +427,141 @@ class HttpClientAdapterTest extends TestCase
 
         $result3 = $adapter->post('https://api.example.com/3', []);
         $this->assertEquals(3, $result3['request']);
+    }
+
+    /**
+     * Test setTimeout method.
+     */
+    public function testSetTimeout(): void
+    {
+        $adapter = new GuzzleAdapter();
+        $adapter->setTimeout(60);
+
+        // Verify it doesn't throw an exception
+        $this->assertInstanceOf(GuzzleAdapter::class, $adapter);
+    }
+
+    /**
+     * Test setTimeout with invalid value.
+     */
+    public function testSetTimeoutWithInvalidValue(): void
+    {
+        $adapter = new GuzzleAdapter();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Timeout must be greater than 0');
+
+        $adapter->setTimeout(0);
+    }
+
+    /**
+     * Test setTimeout with negative value.
+     */
+    public function testSetTimeoutWithNegativeValue(): void
+    {
+        $adapter = new GuzzleAdapter();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Timeout must be greater than 0');
+
+        $adapter->setTimeout(-5);
+    }
+
+    /**
+     * Test setDefaultHeader method.
+     */
+    public function testSetDefaultHeader(): void
+    {
+        $adapter = new GuzzleAdapter();
+        $adapter->setDefaultHeader('Authorization', 'Bearer token123');
+
+        // Verify it doesn't throw an exception
+        $this->assertInstanceOf(GuzzleAdapter::class, $adapter);
+    }
+
+    /**
+     * Test error message extraction from JSON response.
+     */
+    public function testErrorMessageExtractionFromJson(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(400, [], json_encode([
+                'error' => ['message' => 'Custom error message']
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Custom error message');
+
+        $adapter->get('https://api.example.com/error');
+    }
+
+    /**
+     * Test handling ClientException (4xx errors).
+     */
+    public function testHandleClientException(): void
+    {
+        $mockHandler = new MockHandler([
+            new ClientException(
+                'Client error',
+                new Request('GET', 'test'),
+                new Response(401, [], json_encode(['error' => 'Unauthorized']))
+            )
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/Client error \(HTTP 401\)/');
+
+        $adapter->get('https://api.example.com/protected');
+    }
+
+    /**
+     * Test handling ServerException (5xx errors).
+     */
+    public function testHandleServerException(): void
+    {
+        $mockHandler = new MockHandler([
+            new ServerException(
+                'Server error',
+                new Request('POST', 'test'),
+                new Response(502, [], json_encode(['message' => 'Bad Gateway'}))
+            )
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(TransactionException::class);
+        $this->expectExceptionMessageMatches('/Server error \(HTTP 502\)/');
+
+        $adapter->post('https://api.example.com/action', []);
+    }
+
+    /**
+     * Test that 429 (Too Many Requests) is properly categorized as ValidationException.
+     */
+    public function testHandleTooManyRequestsError(): void
+    {
+        $mockHandler = new MockHandler([
+            new Response(429, [], json_encode(['error' => 'Rate limit exceeded']))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/HTTP 429 error/');
+
+        $adapter->get('https://api.example.com/rate-limited');
     }
 }

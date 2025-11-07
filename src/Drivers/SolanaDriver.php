@@ -5,26 +5,30 @@ declare(strict_types=1);
 namespace Blockchain\Drivers;
 
 use Blockchain\Contracts\BlockchainDriverInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use Blockchain\Exceptions\ConfigurationException;
+use Blockchain\Transport\GuzzleAdapter;
 use Blockchain\Utils\CachePool;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 
 class SolanaDriver implements BlockchainDriverInterface
 {
     private const LAMPORTS_PER_SOL = 1000000000;
 
-    protected ?Client $client = null;
+    protected ?GuzzleAdapter $httpClient = null;
     protected array $config = [];
     protected CachePool $cache;
 
     /**
-     * Constructor to inject optional cache dependency.
+     * Constructor to inject optional dependencies.
      *
+     * @param GuzzleAdapter|null $httpClient Optional HTTP client adapter for making requests
      * @param CachePool|null $cache Optional cache pool for caching responses
      */
-    public function __construct(?CachePool $cache = null)
+    public function __construct(?GuzzleAdapter $httpClient = null, ?CachePool $cache = null)
     {
+        $this->httpClient = $httpClient;
         $this->cache = $cache ?? new CachePool();
     }
 
@@ -38,13 +42,16 @@ class SolanaDriver implements BlockchainDriverInterface
         }
 
         $this->config = $config;
-        $this->client = new Client([
-            'base_uri' => $config['endpoint'],
-            'timeout' => $config['timeout'] ?? 30,
-            'headers' => [
-                'Content-Type' => 'application/json',
-            ],
-        ]);
+        
+        // Create GuzzleAdapter if not provided via constructor
+        if ($this->httpClient === null) {
+            $clientConfig = [
+                'base_uri' => $config['endpoint'],
+                'timeout' => $config['timeout'] ?? 30,
+            ];
+            
+            $this->httpClient = new GuzzleAdapter(null, $clientConfig);
+        }
     }
 
     /**
@@ -62,32 +69,24 @@ class SolanaDriver implements BlockchainDriverInterface
             return $this->cache->get($cacheKey);
         }
 
-        try {
-            $response = $this->client->post('', [
-                'json' => [
-                    'jsonrpc' => '2.0',
-                    'id' => 1,
-                    'method' => 'getBalance',
-                    'params' => [$address]
-                ]
-            ]);
+        $data = $this->httpClient->post('', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'getBalance',
+            'params' => [$address]
+        ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($data['error'])) {
-                throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
-            }
-
-            // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
-            $balance = ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
-
-            // Store in cache with default TTL
-            $this->cache->set($cacheKey, $balance);
-
-            return $balance;
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get balance: ' . $e->getMessage());
+        if (isset($data['error'])) {
+            throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
         }
+
+        // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
+        $balance = ($data['result']['value'] ?? 0) / self::LAMPORTS_PER_SOL;
+
+        // Store in cache with default TTL
+        $this->cache->set($cacheKey, $balance);
+
+        return $balance;
     }
 
     /**
@@ -121,34 +120,26 @@ class SolanaDriver implements BlockchainDriverInterface
             return $this->cache->get($cacheKey);
         }
 
-        try {
-            $response = $this->client->post('', [
-                'json' => [
-                    'jsonrpc' => '2.0',
-                    'id' => 1,
-                    'method' => 'getTransaction',
-                    'params' => [
-                        $txHash,
-                        ['encoding' => 'json', 'maxSupportedTransactionVersion' => 0]
-                    ]
-                ]
-            ]);
+        $data = $this->httpClient->post('', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'getTransaction',
+            'params' => [
+                $txHash,
+                ['encoding' => 'json', 'maxSupportedTransactionVersion' => 0]
+            ]
+        ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($data['error'])) {
-                throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
-            }
-
-            $transaction = $data['result'] ?? [];
-
-            // Store in cache with longer TTL for immutable transaction data
-            $this->cache->set($cacheKey, $transaction, 3600); // 1 hour
-
-            return $transaction;
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get transaction: ' . $e->getMessage());
+        if (isset($data['error'])) {
+            throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
         }
+
+        $transaction = $data['result'] ?? [];
+
+        // Store in cache with longer TTL for immutable transaction data
+        $this->cache->set($cacheKey, $transaction, 3600); // 1 hour
+
+        return $transaction;
     }
 
     /**
@@ -166,34 +157,26 @@ class SolanaDriver implements BlockchainDriverInterface
             return $this->cache->get($cacheKey);
         }
 
-        try {
-            $response = $this->client->post('', [
-                'json' => [
-                    'jsonrpc' => '2.0',
-                    'id' => 1,
-                    'method' => 'getBlock',
-                    'params' => [
-                        (int)$blockNumber,
-                        ['encoding' => 'json', 'maxSupportedTransactionVersion' => 0]
-                    ]
-                ]
-            ]);
+        $data = $this->httpClient->post('', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'getBlock',
+            'params' => [
+                (int)$blockNumber,
+                ['encoding' => 'json', 'maxSupportedTransactionVersion' => 0]
+            ]
+        ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($data['error'])) {
-                throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
-            }
-
-            $block = $data['result'] ?? [];
-
-            // Store in cache with longer TTL for immutable block data
-            $this->cache->set($cacheKey, $block, 3600); // 1 hour
-
-            return $block;
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get block: ' . $e->getMessage());
+        if (isset($data['error'])) {
+            throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
         }
+
+        $block = $data['result'] ?? [];
+
+        // Store in cache with longer TTL for immutable block data
+        $this->cache->set($cacheKey, $block, 3600); // 1 hour
+
+        return $block;
     }
 
     /**
@@ -213,40 +196,32 @@ class SolanaDriver implements BlockchainDriverInterface
     {
         $this->ensureConnected();
 
-        try {
-            $response = $this->client->post('', [
-                'json' => [
-                    'jsonrpc' => '2.0',
-                    'id' => 1,
-                    'method' => 'getTokenAccountsByOwner',
-                    'params' => [
-                        $address,
-                        ['mint' => $tokenAddress],
-                        ['encoding' => 'jsonParsed']
-                    ]
-                ]
-            ]);
+        $data = $this->httpClient->post('', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'getTokenAccountsByOwner',
+            'params' => [
+                $address,
+                ['mint' => $tokenAddress],
+                ['encoding' => 'jsonParsed']
+            ]
+        ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($data['error'])) {
-                throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
-            }
-
-            $accounts = $data['result']['value'] ?? [];
-
-            if (empty($accounts)) {
-                return 0.0;
-            }
-
-            // Return balance from the first token account
-            $tokenInfo = $accounts[0]['account']['data']['parsed']['info'] ?? [];
-            $balance = $tokenInfo['tokenAmount']['uiAmount'] ?? 0;
-
-            return (float)$balance;
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get token balance: ' . $e->getMessage());
+        if (isset($data['error'])) {
+            throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
         }
+
+        $accounts = $data['result']['value'] ?? [];
+
+        if (empty($accounts)) {
+            return 0.0;
+        }
+
+        // Return balance from the first token account
+        $tokenInfo = $accounts[0]['account']['data']['parsed']['info'] ?? [];
+        $balance = $tokenInfo['tokenAmount']['uiAmount'] ?? 0;
+
+        return (float)$balance;
     }
 
     /**
@@ -256,25 +231,17 @@ class SolanaDriver implements BlockchainDriverInterface
     {
         $this->ensureConnected();
 
-        try {
-            $response = $this->client->post('', [
-                'json' => [
-                    'jsonrpc' => '2.0',
-                    'id' => 1,
-                    'method' => 'getEpochInfo'
-                ]
-            ]);
+        $data = $this->httpClient->post('', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'getEpochInfo'
+        ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($data['error'])) {
-                throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
-            }
-
-            return $data['result'] ?? [];
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get network info: ' . $e->getMessage());
+        if (isset($data['error'])) {
+            throw new \Exception('Solana RPC Error: ' . $data['error']['message']);
         }
+
+        return $data['result'] ?? [];
     }
 
     /**
@@ -282,7 +249,7 @@ class SolanaDriver implements BlockchainDriverInterface
      */
     private function ensureConnected(): void
     {
-        if ($this->client === null) {
+        if ($this->httpClient === null) {
             throw new ConfigurationException('Solana driver is not connected. Please call connect() first.');
         }
     }

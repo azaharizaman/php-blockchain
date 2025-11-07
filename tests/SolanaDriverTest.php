@@ -7,6 +7,7 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 use Blockchain\Drivers\SolanaDriver;
 use Blockchain\Exceptions\ConfigurationException;
+use Blockchain\Transport\GuzzleAdapter;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Handler\MockHandler;
@@ -55,14 +56,13 @@ class SolanaDriverTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
 
-        // Use reflection to set the client directly for testing
-        $reflection = new \ReflectionClass($this->driver);
-        $clientProperty = $reflection->getProperty('client');
-        $clientProperty->setAccessible(true);
-        $clientProperty->setValue($this->driver, $client);
+        // Create driver with mocked adapter
+        $driver = new SolanaDriver($adapter);
+        $driver->connect(['endpoint' => 'https://api.mainnet-beta.solana.com']);
 
-        $balance = $this->driver->getBalance('SomeValidSolanaAddress');
+        $balance = $driver->getBalance('SomeValidSolanaAddress');
         
         $this->assertEquals(1.0, $balance); // 1 SOL
     }
@@ -80,17 +80,15 @@ class SolanaDriverTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
 
-        // Use reflection to set the client directly for testing
-        $reflection = new \ReflectionClass($this->driver);
-        $clientProperty = $reflection->getProperty('client');
-        $clientProperty->setAccessible(true);
-        $clientProperty->setValue($this->driver, $client);
+        $driver = new SolanaDriver($adapter);
+        $driver->connect(['endpoint' => 'https://api.mainnet-beta.solana.com']);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Solana RPC Error: Invalid address');
         
-        $this->driver->getBalance('InvalidAddress');
+        $driver->getBalance('InvalidAddress');
     }
 
     public function testGetTransactionSuccess(): void
@@ -109,13 +107,12 @@ class SolanaDriverTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
 
-        $reflection = new \ReflectionClass($this->driver);
-        $clientProperty = $reflection->getProperty('client');
-        $clientProperty->setAccessible(true);
-        $clientProperty->setValue($this->driver, $client);
+        $driver = new SolanaDriver($adapter);
+        $driver->connect(['endpoint' => 'https://api.mainnet-beta.solana.com']);
 
-        $transaction = $this->driver->getTransaction('some_tx_hash');
+        $transaction = $driver->getTransaction('some_tx_hash');
         
         $this->assertIsArray($transaction);
         $this->assertEquals(123456, $transaction['slot']);
@@ -126,17 +123,16 @@ class SolanaDriverTest extends TestCase
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Transaction sending not yet implemented for Solana driver.');
         
-        // Set up a mock client to avoid connection issues
+        // Set up a mock adapter
         $mockHandler = new MockHandler([]);
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
 
-        $reflection = new \ReflectionClass($this->driver);
-        $clientProperty = $reflection->getProperty('client');
-        $clientProperty->setAccessible(true);
-        $clientProperty->setValue($this->driver, $client);
+        $driver = new SolanaDriver($adapter);
+        $driver->connect(['endpoint' => 'https://api.mainnet-beta.solana.com']);
         
-        $this->driver->sendTransaction('from_address', 'to_address', 1.0);
+        $driver->sendTransaction('from_address', 'to_address', 1.0);
     }
 
     public function testEstimateGasReturnsNull(): void
