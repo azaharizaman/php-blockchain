@@ -84,7 +84,7 @@ class EthereumDriverTest extends TestCase
         $driver = new EthereumDriver($adapter);
         $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
 
-        $balance = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb');
+        $balance = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
 
         $this->assertEquals(1.0, $balance);
     }
@@ -134,8 +134,8 @@ class EthereumDriverTest extends TestCase
                 'jsonrpc' => '2.0',
                 'result' => [
                     'hash' => '0x123abc',
-                    'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-                    'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+                    'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                    'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
                     'value' => '0xde0b6b3a7640000',
                     'blockNumber' => '0x123456',
                     'gas' => '0x5208',
@@ -156,7 +156,7 @@ class EthereumDriverTest extends TestCase
 
         $this->assertIsArray($transaction);
         $this->assertEquals('0x123abc', $transaction['hash']);
-        $this->assertEquals('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb', $transaction['from']);
+        $this->assertEquals('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0', $transaction['from']);
     }
 
     public function testGetBlockByNumberSuccess(): void
@@ -347,10 +347,10 @@ class EthereumDriverTest extends TestCase
         $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
 
         // First call - should hit the network
-        $balance1 = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb');
+        $balance1 = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
 
         // Second call - should use cache (no additional mock response needed)
-        $balance2 = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb');
+        $balance2 = $driver->getBalance('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0');
 
         $this->assertEquals($balance1, $balance2);
         $this->assertEquals(1.0, $balance2);
