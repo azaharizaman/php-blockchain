@@ -206,6 +206,40 @@ $decoded = Serializer::fromBase64($encoded);
 - Throws `JsonException` for invalid JSON
 - Throws `InvalidArgumentException` for invalid Base64
 
+### Abi
+
+ABI (Application Binary Interface) encoding and decoding for Ethereum smart contracts. Provides helpers for encoding function calls and decoding responses when interacting with EVM-compatible blockchains.
+
+```php
+use Blockchain\Utils\Abi;
+
+// Generate function selector
+$selector = Abi::getFunctionSelector('balanceOf(address)');
+// Returns: '0x70a08231'
+
+// Encode function call with parameters
+$data = Abi::encodeFunctionCall('transfer(address,uint256)', [
+    '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+    '1000000000000000000'  // 1 token with 18 decimals
+]);
+
+// Decode response data
+$balance = Abi::decodeResponse('uint256', $responseData);
+// Returns: '1000000000000000000'
+
+$address = Abi::decodeResponse('address', $responseData);
+// Returns: '0x742d35cc6634c0532925a3b844bc9e7595f0beb'
+
+// ERC-20 convenience methods
+$balanceOfData = Abi::encodeBalanceOf($walletAddress);
+$transferData = Abi::encodeTransfer($recipientAddress, $amount);
+```
+
+**Supported Types:**
+- Encoding: `address`, `uint256`, `bool`, `string`
+- Decoding: `uint256`, `address`, `bool`, `string`
+- Note: Arrays, structs, and complex types are planned for future releases
+
 ### GuzzleAdapter
 
 Provides a centralized HTTP client adapter that implements the `HttpClientAdapter` interface. This adapter standardizes HTTP operations across all blockchain drivers with consistent error handling and configuration.
