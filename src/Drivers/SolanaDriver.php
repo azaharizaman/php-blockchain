@@ -58,9 +58,8 @@ class SolanaDriver implements BlockchainDriverInterface
         $cacheKey = CachePool::generateKey('getBalance', ['address' => $address]);
 
         // Check cache first
-        $cachedBalance = $this->cache->get($cacheKey);
-        if ($cachedBalance !== null) {
-            return $cachedBalance;
+        if ($this->cache->has($cacheKey)) {
+            return $this->cache->get($cacheKey);
         }
 
         try {
