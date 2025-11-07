@@ -22,8 +22,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Blockchain\\Tests\\": "tests/",
-      "Tests\\": "tests/"
+      "Blockchain\\Tests\\": "tests/"
     }
   },
   "require-dev": {
