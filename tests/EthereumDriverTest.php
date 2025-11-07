@@ -89,6 +89,30 @@ class EthereumDriverTest extends TestCase
         $this->assertEquals(1.0, $balance);
     }
 
+    public function testGetBalanceWithInvalidAddress(): void
+    {
+        // Mock eth_chainId response
+        $mockHandler = new MockHandler([
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid Ethereum address format');
+
+        $driver->getBalance('invalid_address');
+    }
+
     public function testGetBalanceWithError(): void
     {
         // Mock HTTP responses
@@ -175,7 +199,24 @@ class EthereumDriverTest extends TestCase
                     'number' => '0x123456',
                     'hash' => '0xabc123def456',
                     'timestamp' => '0x5f5e100',
-                    'transactions' => ['0xtx1', '0xtx2'],
+                    'transactions' => [
+                        [
+                            'hash' => '0xtx1',
+                            'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'value' => '0xde0b6b3a7640000',
+                            'gas' => '0x5208',
+                            'gasPrice' => '0x3b9aca00'
+                        ],
+                        [
+                            'hash' => '0xtx2',
+                            'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'value' => '0x0',
+                            'gas' => '0x5208',
+                            'gasPrice' => '0x3b9aca00'
+                        ]
+                    ],
                     'parentHash' => '0xparent123'
                 ],
                 'id' => 1
@@ -212,7 +253,16 @@ class EthereumDriverTest extends TestCase
                     'number' => '0x123456',
                     'hash' => '0xabc123def456',
                     'timestamp' => '0x5f5e100',
-                    'transactions' => [],
+                    'transactions' => [
+                        [
+                            'hash' => '0xtx1',
+                            'from' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'to' => '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+                            'value' => '0x0',
+                            'gas' => '0x5208',
+                            'gasPrice' => '0x3b9aca00'
+                        ]
+                    ],
                     'parentHash' => '0xparent123'
                 ],
                 'id' => 1

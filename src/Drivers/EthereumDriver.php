@@ -90,12 +90,18 @@ class EthereumDriver implements BlockchainDriverInterface
      *
      * @param string $address The Ethereum address to query (0x prefixed)
      * @throws ConfigurationException If the driver is not connected
+     * @throws \InvalidArgumentException If the address format is invalid
      * @throws \Exception If the balance query fails
      * @return float The balance in ETH
      */
     public function getBalance(string $address): float
     {
         $this->ensureConnected();
+
+        // Validate address format
+        if (!$this->validateAddress($address)) {
+            throw new \InvalidArgumentException("Invalid Ethereum address format: {$address}");
+        }
 
         // Generate cache key
         $cacheKey = CachePool::generateKey('getBalance', ['address' => $address]);
