@@ -69,20 +69,11 @@ class ConfigLoader
         $config = [];
         $prefixLength = strlen($prefix);
 
+        // Check $_ENV first (most reliable and efficient)
         foreach ($_ENV as $key => $value) {
             if (str_starts_with($key, $prefix)) {
                 $configKey = strtolower(substr($key, $prefixLength));
                 $config[$configKey] = self::parseEnvValue($value);
-            }
-        }
-
-        // Also check getenv() for compatibility
-        foreach (getenv() as $key => $value) {
-            if (str_starts_with($key, $prefix)) {
-                $configKey = strtolower(substr($key, $prefixLength));
-                if (!isset($config[$configKey])) {
-                    $config[$configKey] = self::parseEnvValue($value);
-                }
             }
         }
 
