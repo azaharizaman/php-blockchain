@@ -60,7 +60,7 @@ $data = Abi::encodeTransfer($to, $amount);
 
 **Decoding:**
 - `uint256` - Returns decimal string (preserves precision)
-- `address` - Returns checksummed address with 0x prefix
+- `address` - Returns lowercase address with 0x prefix
 - `bool` - Returns PHP boolean
 - `string` - Returns decoded string
 
