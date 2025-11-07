@@ -303,7 +303,7 @@ final class KeccakLib
             : self::keccak32($in_raw, $capacity, $outputlength, $suffix, $raw_output);
     }
 
-    public static function hash($in, int $mdlen, bool $raw_output = false): string {
+    public static function hash(string $in, int $mdlen, bool $raw_output = false): string {
         if (!in_array($mdlen, [224, 256, 384, 512], true)) {
             throw new Exception('Unsupported Keccak Hash output size.');
         }
