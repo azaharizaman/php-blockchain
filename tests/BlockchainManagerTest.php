@@ -222,4 +222,41 @@ class BlockchainManagerTest extends TestCase
         // Should throw exception for invalid driver
         new BlockchainManager('invalid_driver', ['endpoint' => 'test']);
     }
+
+    public function testSetDriverValidatesConfigWithConfigLoader(): void
+    {
+        $config = [
+            'rpc_url' => 'https://api.mainnet-beta.solana.com',
+            'timeout' => 30,
+        ];
+        
+        // Valid config should work
+        $result = $this->manager->setDriver('solana', $config);
+        
+        $this->assertSame($this->manager, $result);
+    }
+
+    public function testSetDriverThrowsValidationExceptionForInvalidConfig(): void
+    {
+        $config = [
+            'rpc_url' => 'not-a-valid-url', // Invalid URL
+        ];
+        
+        $this->expectException(\Blockchain\Exceptions\ValidationException::class);
+        $this->expectExceptionMessage('must be a valid URL');
+        
+        $this->manager->setDriver('solana', $config);
+    }
+
+    public function testSetDriverThrowsValidationExceptionForMissingRequiredField(): void
+    {
+        $config = [
+            'timeout' => 30, // Missing required rpc_url or endpoint
+        ];
+        
+        $this->expectException(\Blockchain\Exceptions\ValidationException::class);
+        $this->expectExceptionMessage("One of the following fields is required");
+        
+        $this->manager->setDriver('solana', $config);
+    }
 }

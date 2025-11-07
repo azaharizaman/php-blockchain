@@ -236,6 +236,81 @@ $adapter = new HttpClientAdapter($client);
 - Automatically parses JSON responses
 - Provides detailed error messages with HTTP status codes
 
+### ConfigLoader
+
+Loads and validates blockchain driver configurations from multiple sources:
+
+```php
+use Blockchain\Config\ConfigLoader;
+
+// Load from array
+$config = ConfigLoader::fromArray([
+    'rpc_url' => 'https://api.mainnet-beta.solana.com',
+    'timeout' => 30,
+    'commitment' => 'finalized'
+]);
+
+// Load from environment variables
+// Looks for variables like: BLOCKCHAIN_RPC_URL, BLOCKCHAIN_TIMEOUT, etc.
+$config = ConfigLoader::fromEnv('BLOCKCHAIN_');
+
+// Load from PHP file
+$config = ConfigLoader::fromFile(__DIR__ . '/config/solana.php');
+
+// Load from JSON file
+$config = ConfigLoader::fromFile(__DIR__ . '/config/solana.json');
+
+// Validate configuration
+try {
+    ConfigLoader::validateConfig($config, 'solana');
+    echo "Configuration is valid!";
+} catch (\Blockchain\Exceptions\ValidationException $e) {
+    echo "Invalid configuration: " . $e->getMessage();
+    print_r($e->getErrors()); // Get detailed error information
+}
+```
+
+**Configuration Sources:**
+1. **Array**: Direct configuration arrays
+2. **Environment**: Environment variables with customizable prefix
+3. **File**: PHP files (returning arrays) or JSON files
+
+**Schema Validation:**
+
+ConfigLoader validates configurations against driver-specific schemas. For Solana:
+
+- **Required fields:**
+  - `rpc_url` (string, valid HTTP/HTTPS URL)
+
+- **Optional fields:**
+  - `timeout` (integer, > 0) - Request timeout in seconds
+  - `commitment` (string, one of: 'finalized', 'confirmed', 'processed')
+
+**Environment Variable Parsing:**
+
+The loader automatically converts environment variable values:
+- `'true'`/`'false'` → boolean
+- Numeric strings → int/float
+- Other values → string
+
+**Example Configuration Files:**
+
+See `config/solana.example.php` and `.env.example` for complete configuration examples.
+
+**Error Messages:**
+
+Validation errors include detailed field-specific information:
+
+```php
+try {
+    ConfigLoader::validateConfig($config, 'solana');
+} catch (\Blockchain\Exceptions\ValidationException $e) {
+    // Get all validation errors
+    $errors = $e->getErrors();
+    // Example: ['rpc_url' => 'must be a valid URL', 'timeout' => 'must be greater than 0']
+}
+```
+
 ## 🧪 Testing
 
 Run the test suite:
