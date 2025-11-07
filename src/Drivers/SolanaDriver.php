@@ -8,9 +8,6 @@ use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Transport\GuzzleAdapter;
 use Blockchain\Utils\CachePool;
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 
 class SolanaDriver implements BlockchainDriverInterface
 {

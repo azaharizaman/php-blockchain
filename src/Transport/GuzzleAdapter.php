@@ -173,6 +173,9 @@ class GuzzleAdapter implements HttpClientAdapter
     /**
      * Set a default header for all requests.
      *
+     * Note: This method recreates the Guzzle client instance. For best performance,
+     * set headers during construction or before making multiple requests.
+     *
      * @param string $name Header name
      * @param string $value Header value
      * @return void
@@ -193,6 +196,9 @@ class GuzzleAdapter implements HttpClientAdapter
 
     /**
      * Set the timeout for all requests.
+     *
+     * Note: This method recreates the Guzzle client instance. For best performance,
+     * set timeout during construction or before making multiple requests.
      *
      * @param int $seconds Timeout in seconds (must be greater than 0)
      * @return void
