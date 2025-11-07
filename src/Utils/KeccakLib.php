@@ -311,7 +311,7 @@ final class KeccakLib
         return self::keccak($in, $mdlen, $mdlen, self::LFSR, $raw_output);
     }
 
-    public static function shake($in, int $security_level, int $outlen, bool $raw_output = false): string {
+    public static function shake(string $in, int $security_level, int $outlen, bool $raw_output = false): string {
         if (!in_array($security_level, [128, 256], true)) {
             throw new Exception('Unsupported Keccak Shake security level.');
         }
