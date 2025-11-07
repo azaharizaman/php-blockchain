@@ -247,11 +247,6 @@ class CacheIntegrationTest extends TestCase
         // Second driver instance with same cache
         $driver2 = new SolanaDriver($cache1);
 
-        $reflection2 = new \ReflectionClass($driver2);
-        $clientProperty2 = $reflection2->getProperty('client');
-        $clientProperty2->setAccessible(true);
-        // Don't set client for driver2 to ensure it uses cache
-
         // This should NOT make a network request, but use cached value
         $key = CachePool::generateKey('getBalance', ['address' => $address]);
         $cachedValue = $cache1->get($key);
