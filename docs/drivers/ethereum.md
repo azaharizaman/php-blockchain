@@ -274,6 +274,9 @@ $tokens = [
 foreach ($tokens as $name => $tokenAddress) {
     $data = Abi::encodeBalanceOf($walletAddress);
     // Call contract and decode (implementation details omitted)
+    // Example: $result = $driver->callContract($tokenAddress, $data);
+    // Example: $balance = Abi::decodeResponse('uint256', $result);
+    $balance = 0; // TODO: Replace with actual decoded balance
     echo "{$name} Balance: {$balance}\n";
 }
 ```
