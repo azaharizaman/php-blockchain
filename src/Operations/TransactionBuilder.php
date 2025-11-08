@@ -450,8 +450,8 @@ class TransactionBuilder
         if (isset($options['idempotencyToken'])) {
             $metadata['idempotencyToken'] = $options['idempotencyToken'];
         } else {
-            // Generate deterministic token using wallet address and payload fingerprint
-            $hint = $this->wallet->getAddress() . '|' . time() . '|' . uniqid('', true);
+            // Generate deterministic token from wallet address and transaction payload
+            $hint = $this->wallet->getAddress() . '|' . json_encode($options, JSON_THROW_ON_ERROR);
             $metadata['idempotencyToken'] = Idempotency::generate($hint);
         }
 
