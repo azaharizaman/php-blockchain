@@ -130,7 +130,10 @@ class TransactionQueue
     /**
      * Constructor
      *
-     * @param array<string,mixed> $options Queue configuration options
+     * @param array<string,mixed> $options Queue configuration options. Supported keys:
+     *   - maxAttempts (int, default: 5): Maximum retry attempts before giving up
+     *   - baseBackoffSeconds (int, default: 2): Base backoff in seconds for exponential calculation
+     *   - maxBackoffSeconds (int, default: 300): Maximum backoff delay in seconds (cap to prevent overflow)
      * @param callable|null $clockFn Custom clock function returning current timestamp
      * @param callable|null $jitterFn Custom jitter function for backoff randomization
      * @param LoggerInterface|null $logger PSR-3 logger for observability
