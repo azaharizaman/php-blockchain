@@ -8,6 +8,7 @@ use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Wallet\WalletInterface;
 use Blockchain\Exceptions\TransactionException;
 use Blockchain\Operations\Idempotency;
+use Blockchain\Telemetry\OperationTracerInterface;
 
 /**
  * TransactionBuilder
@@ -133,6 +134,11 @@ class TransactionBuilder
     private ?array $gasOptions = null;
 
     /**
+     * Optional telemetry tracer for lifecycle hooks
+     */
+    private ?OperationTracerInterface $tracer = null;
+
+    /**
      * Constructor
      *
      * @param BlockchainDriverInterface $driver The blockchain driver for transaction formatting
@@ -192,6 +198,23 @@ class TransactionBuilder
     {
         $clone = clone $this;
         $clone->gasOptions = $gasOptions;
+        return $clone;
+    }
+
+    /**
+     * Create a new builder instance with a tracer
+     *
+     * Returns a new TransactionBuilder instance with the specified tracer,
+     * maintaining immutability of the original builder.
+     *
+     * @param OperationTracerInterface $tracer Telemetry tracer for lifecycle hooks
+     *
+     * @return self New builder instance with tracer configured
+     */
+    public function withTracer(OperationTracerInterface $tracer): self
+    {
+        $clone = clone $this;
+        $clone->tracer = $tracer;
         return $clone;
     }
 
@@ -257,6 +280,14 @@ class TransactionBuilder
             $signatures = $this->signPayload($payload);
         }
 
+        // Emit telemetry event (SEC-001: sanitized data only)
+        $this->tracer?->onTransactionBuilt([
+            'driver' => $driverName,
+            'from' => $metadata['from'],
+            'timestamp' => time(),
+            'hasSignature' => !empty($signatures),
+        ]);
+
         return [
             'driver' => $driverName,
             'payload' => $payload,
@@ -317,6 +348,14 @@ class TransactionBuilder
         if (!($options['skipSign'] ?? false)) {
             $signatures = $this->signPayload($payload);
         }
+
+        // Emit telemetry event (SEC-001: sanitized data only)
+        $this->tracer?->onTransactionBuilt([
+            'driver' => $driverName,
+            'from' => $metadata['from'],
+            'timestamp' => time(),
+            'hasSignature' => !empty($signatures),
+        ]);
 
         return [
             'driver' => $driverName,

@@ -6,6 +6,7 @@ namespace Blockchain\Operations;
 
 use Throwable;
 use Blockchain\Storage\IdempotencyStoreInterface;
+use Blockchain\Telemetry\OperationTracerInterface;
 
 /**
  * TransactionQueue
@@ -134,6 +135,11 @@ class TransactionQueue
     private ?IdempotencyStoreInterface $idempotencyStore;
 
     /**
+     * Telemetry tracer instance (optional)
+     */
+    private ?OperationTracerInterface $tracer;
+
+    /**
      * Constructor
      *
      * @param array<string,mixed> $options Queue configuration options. Supported keys:
@@ -144,13 +150,15 @@ class TransactionQueue
      * @param callable|null $jitterFn Custom jitter function for backoff randomization
      * @param LoggerInterface|null $logger PSR-3 logger for observability
      * @param IdempotencyStoreInterface|null $idempotencyStore Optional idempotency store for duplicate detection
+     * @param OperationTracerInterface|null $tracer Optional telemetry tracer for lifecycle hooks
      */
     public function __construct(
         array $options = [],
         ?callable $clockFn = null,
         ?callable $jitterFn = null,
         ?LoggerInterface $logger = null,
-        ?IdempotencyStoreInterface $idempotencyStore = null
+        ?IdempotencyStoreInterface $idempotencyStore = null,
+        ?OperationTracerInterface $tracer = null
     ) {
         $this->queue = new \SplQueue();
         $this->maxAttempts = $options['maxAttempts'] ?? 5;
@@ -160,6 +168,7 @@ class TransactionQueue
         $this->jitterFn = $jitterFn ?? fn(int $delay) => $delay;
         $this->logger = $logger;
         $this->idempotencyStore = $idempotencyStore;
+        $this->tracer = $tracer;
     }
 
     /**
@@ -199,6 +208,15 @@ class TransactionQueue
         }
 
         $this->queue->enqueue($job);
+        
+        // Emit telemetry event (SEC-001: sanitized data only)
+        $this->tracer?->onEnqueued([
+            'jobId' => $job->getId(),
+            'attempts' => $job->getAttempts(),
+            'nextAvailableAt' => $job->getNextAvailableAt(),
+            'timestamp' => ($this->clockFn)(),
+        ]);
+        
         $this->logger?->debug('Job enqueued', [
             'jobId' => $job->getId(),
             'attempts' => $job->getAttempts(),
@@ -239,6 +257,14 @@ class TransactionQueue
 
             if ($found === null && $job->getNextAvailableAt() <= $currentTime) {
                 $found = $job;
+                
+                // Emit telemetry event (SEC-001: sanitized data only)
+                $this->tracer?->onDequeued([
+                    'jobId' => $job->getId(),
+                    'attempts' => $job->getAttempts(),
+                    'timestamp' => $currentTime,
+                ]);
+                
                 $this->logger?->debug('Job dequeued', [
                     'jobId' => $job->getId(),
                     'attempts' => $job->getAttempts(),

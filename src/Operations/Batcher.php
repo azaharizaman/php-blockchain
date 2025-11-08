@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockchain\Operations;
 
 use Blockchain\Contracts\BlockchainDriverInterface;
+use Blockchain\Telemetry\OperationTracerInterface;
 use Throwable;
 
 /**
@@ -421,52 +422,4 @@ class BatchResult
     }
 }
 
-/**
- * OperationTracerInterface
- *
- * Interface for telemetry and observability hooks in batch operations.
- * Implementations can emit metrics to monitoring systems without exposing
- * sensitive transaction data (SEC-001 compliance).
- *
- * @package Blockchain\Operations
- */
-interface OperationTracerInterface
-{
-    /**
-     * Trace batch start event
-     *
-     * @param int $jobCount Number of jobs in the batch
-     *
-     * @return void
-     */
-    public function traceBatchStart(int $jobCount): void;
 
-    /**
-     * Trace batch completion event
-     *
-     * @param int $successCount Number of successful jobs
-     * @param int $failureCount Number of failed jobs
-     *
-     * @return void
-     */
-    public function traceBatchComplete(int $successCount, int $failureCount): void;
-
-    /**
-     * Trace individual job success
-     *
-     * @param string $jobId Job identifier
-     *
-     * @return void
-     */
-    public function traceJobSuccess(string $jobId): void;
-
-    /**
-     * Trace individual job failure
-     *
-     * @param string $jobId Job identifier
-     * @param string $errorMessage Sanitized error message (no sensitive data)
-     *
-     * @return void
-     */
-    public function traceJobFailure(string $jobId, string $errorMessage): void;
-}

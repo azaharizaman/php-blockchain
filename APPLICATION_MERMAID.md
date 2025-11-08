@@ -457,8 +457,8 @@ classDiagram
         -array metadata
         -int attempts
         -int nextAvailableAt
-        -array errors
-        +__construct(string id, array payload, array metadata)
+        -?string idempotencyToken
+        +__construct(...)
         +getId() string
         +getPayload() array
         +getMetadata() array
