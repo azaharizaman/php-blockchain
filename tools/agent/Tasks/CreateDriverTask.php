@@ -203,7 +203,9 @@ class CreateDriverTask
         $path = $this->projectRoot . "/src/Drivers/{$driverName}Driver.php";
         $this->ensureDirectoryExists(dirname($path));
         
-        file_put_contents($path, $code);
+        if (file_put_contents($path, $code) === false) {
+            throw new ValidationException("Failed to write driver file to {$path}");
+        }
         
         return $path;
     }
