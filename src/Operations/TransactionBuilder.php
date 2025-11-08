@@ -7,6 +7,7 @@ namespace Blockchain\Operations;
 use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Wallet\WalletInterface;
 use Blockchain\Exceptions\TransactionException;
+use Blockchain\Operations\Idempotency;
 
 /**
  * TransactionBuilder
