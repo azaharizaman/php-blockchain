@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockchain\Operations;
 
 use Throwable;
+use Blockchain\Storage\IdempotencyStoreInterface;
 
 /**
  * TransactionQueue
@@ -128,6 +129,11 @@ class TransactionQueue
     private ?LoggerInterface $logger;
 
     /**
+     * Idempotency store instance (optional)
+     */
+    private ?IdempotencyStoreInterface $idempotencyStore;
+
+    /**
      * Constructor
      *
      * @param array<string,mixed> $options Queue configuration options. Supported keys:
@@ -137,12 +143,14 @@ class TransactionQueue
      * @param callable|null $clockFn Custom clock function returning current timestamp
      * @param callable|null $jitterFn Custom jitter function for backoff randomization
      * @param LoggerInterface|null $logger PSR-3 logger for observability
+     * @param IdempotencyStoreInterface|null $idempotencyStore Optional idempotency store for duplicate detection
      */
     public function __construct(
         array $options = [],
         ?callable $clockFn = null,
         ?callable $jitterFn = null,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?IdempotencyStoreInterface $idempotencyStore = null
     ) {
         $this->queue = new \SplQueue();
         $this->maxAttempts = $options['maxAttempts'] ?? 5;
@@ -151,6 +159,7 @@ class TransactionQueue
         $this->clockFn = $clockFn ?? fn() => time();
         $this->jitterFn = $jitterFn ?? fn(int $delay) => $delay;
         $this->logger = $logger;
+        $this->idempotencyStore = $idempotencyStore;
     }
 
     /**
@@ -159,12 +168,36 @@ class TransactionQueue
      * Adds a new job to the queue. The job will be available for dequeue
      * only after its nextAvailableAt timestamp has passed.
      *
+     * If an idempotency store is configured and the job has an idempotency
+     * token, this method will check for duplicates before enqueueing. If a
+     * duplicate is detected, the job is silently skipped.
+     *
      * @param TransactionJob $job Job to enqueue
      *
      * @return void
      */
     public function enqueue(TransactionJob $job): void
     {
+        // Check for duplicates using idempotency store
+        $token = $job->getIdempotencyToken();
+        if ($token !== null && $this->idempotencyStore !== null) {
+            if ($this->idempotencyStore->has($token)) {
+                $this->logger?->info('Job skipped (duplicate detected)', [
+                    'jobId' => $job->getId(),
+                    // SEC-001: Log hashed token to avoid exposing full token
+                    'tokenHash' => substr(hash('sha256', $token), 0, 16),
+                ]);
+                return; // Skip duplicate
+            }
+
+            // Record the token
+            $this->idempotencyStore->record($token, [
+                'jobId' => $job->getId(),
+                'enqueuedAt' => ($this->clockFn)(),
+                'attempts' => $job->getAttempts(),
+            ]);
+        }
+
         $this->queue->enqueue($job);
         $this->logger?->debug('Job enqueued', [
             'jobId' => $job->getId(),
