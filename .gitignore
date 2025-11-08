@@ -75,6 +75,8 @@ pids
 # Static analysis
 /.phpstan.cache
 /.psalm.cache
+phpstan.phar
+phpunit.phar
 
 # Local development
 /examples/test.php

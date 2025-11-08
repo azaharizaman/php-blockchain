@@ -626,6 +626,426 @@ class EthereumDriverTest extends TestCase
         $this->assertNull($result);
     }
 
+    public function testGetTokenBalanceSuccess(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns 1000 tokens in smallest unit
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000003635c9adc5dea00000', // 1000 * 10^18
+                'id' => 1
+            ])),
+            // Response for eth_call (decimals) - returns 18
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000012', // 18
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xdac17f958d2ee523a2206206994597c13d831ec7' // USDT contract
+        );
+
+        // Should return 1000.0 (1000 * 10^18 / 10^18)
+        $this->assertEquals(1000.0, $balance);
+    }
+
+    public function testGetTokenBalanceWithSixDecimals(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns 1000 USDC (6 decimals)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x000000000000000000000000000000000000000000000000000000003b9aca00', // 1000 * 10^6 = 1,000,000,000 in decimal = 0x3b9aca00
+                'id' => 1
+            ])),
+            // Response for eth_call (decimals) - returns 6
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000006', // 6
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' // USDC contract
+        );
+
+        // Should return 1000.0 (1000000000 / 10^6)
+        $this->assertEquals(1000.0, $balance);
+    }
+
+    public function testGetTokenBalanceWithEightDecimals(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns 100 tokens with 8 decimals
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000000000000002540be400', // 100 * 10^8 = 10,000,000,000 = 0x2540be400
+                'id' => 1
+            ])),
+            // Response for eth_call (decimals) - returns 8
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000008', // 8
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599' // WBTC contract (8 decimals)
+        );
+
+        // Should return 100.0
+        $this->assertEquals(100.0, $balance);
+    }
+
+    public function testGetTokenBalanceWithZeroDecimals(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns 1000 tokens
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000000000000000000003e8', // 1000
+                'id' => 1
+            ])),
+            // Response for eth_call (decimals) - returns 0
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000000', // 0
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x0000000000000000000000000000000000000000'
+        );
+
+        // Should return 1000.0 (no decimal adjustment)
+        $this->assertEquals(1000.0, $balance);
+    }
+
+    public function testGetTokenBalanceWithZeroBalance(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns 0
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000000',
+                'id' => 1
+            ])),
+            // Response for eth_call (decimals) - returns 18
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000012',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x6b175474e89094c44da98b954eedeac495271d0f' // DAI contract
+        );
+
+        $this->assertEquals(0.0, $balance);
+    }
+
+    public function testGetTokenBalanceWithInvalidTokenAddress(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            'invalid_token_address'
+        );
+
+        // Should return null for invalid address
+        $this->assertNull($balance);
+    }
+
+    public function testGetTokenBalanceWithInvalidWalletAddress(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            'invalid_wallet_address',
+            '0xdac17f958d2ee523a2206206994597c13d831ec7'
+        );
+
+        // Should return null for invalid address
+        $this->assertNull($balance);
+    }
+
+    public function testGetTokenBalanceWithNonERC20Contract(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns error
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'error' => ['message' => 'execution reverted'],
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0x0000000000000000000000000000000000000000' // Not an ERC-20 contract
+        );
+
+        // Should return null for non-ERC-20 contracts
+        $this->assertNull($balance);
+    }
+
+    public function testGetTokenBalanceWithCaching(): void
+    {
+        $cache = new CachePool();
+
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // First call - Response for eth_call (balanceOf)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000003635c9adc5dea00000',
+                'id' => 1
+            ])),
+            // First call - Response for eth_call (decimals)
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000012',
+                'id' => 1
+            ]))
+            // No more responses needed - second call should use cache
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter, $cache);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        // First call - should hit the network
+        $balance1 = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xdac17f958d2ee523a2206206994597c13d831ec7'
+        );
+
+        // Second call - should use cache (no additional mock responses needed)
+        $balance2 = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xdac17f958d2ee523a2206206994597c13d831ec7'
+        );
+
+        $this->assertEquals($balance1, $balance2);
+        $this->assertEquals(1000.0, $balance2);
+    }
+
+    public function testGetTokenBalanceDecimalsCaching(): void
+    {
+        $cache = new CachePool();
+
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // First call - Response for eth_call (balanceOf) for address 1
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000003635c9adc5dea00000',
+                'id' => 1
+            ])),
+            // First call - Response for eth_call (decimals) - cached for subsequent calls
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x0000000000000000000000000000000000000000000000000000000000000012',
+                'id' => 1
+            ])),
+            // Second call - Response for eth_call (balanceOf) for address 2
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x00000000000000000000000000000000000000000000001bc16d674ec80000',
+                'id' => 1
+            ]))
+            // No decimals() call for second request - should use cached value
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter, $cache);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $tokenAddress = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+
+        // First call for address 1 - should fetch decimals
+        $balance1 = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            $tokenAddress
+        );
+
+        // Second call for address 2 - should reuse cached decimals
+        $balance2 = $driver->getTokenBalance(
+            '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
+            $tokenAddress
+        );
+
+        $this->assertEquals(1000.0, $balance1);
+        $this->assertEquals(500.0, $balance2);
+    }
+
+    public function testGetTokenBalanceWithEmptyResult(): void
+    {
+        $mockHandler = new MockHandler([
+            // Response for eth_chainId during connect
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x1',
+                'id' => 1
+            ])),
+            // Response for eth_call (balanceOf) - returns empty result
+            new Response(200, [], json_encode([
+                'jsonrpc' => '2.0',
+                'result' => '0x',
+                'id' => 1
+            ]))
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        $client = new Client(['handler' => $handlerStack]);
+        $adapter = new GuzzleAdapter($client);
+
+        $driver = new EthereumDriver($adapter);
+        $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
+
+        $balance = $driver->getTokenBalance(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            '0xdac17f958d2ee523a2206206994597c13d831ec7'
+        );
+
+        // Should return null for empty result
+        $this->assertNull($balance);
+    }
+
     public function testGetNetworkInfoSuccess(): void
     {
         $mockHandler = new MockHandler([

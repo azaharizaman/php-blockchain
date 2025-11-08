@@ -8,6 +8,7 @@ use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Exceptions\TransactionException;
 use Blockchain\Transport\GuzzleAdapter;
+use Blockchain\Utils\Abi;
 use Blockchain\Utils\CachePool;
 
 /**
@@ -59,6 +60,16 @@ class EthereumDriver implements BlockchainDriverInterface
      * Number of decimal places for Wei (18).
      */
     private const WEI_DECIMALS = 18;
+
+    /**
+     * Default decimals for tokens when decimals() call fails.
+     */
+    private const DEFAULT_TOKEN_DECIMALS = 18;
+
+    /**
+     * Cache TTL for token decimals (24 hours).
+     */
+    private const TOKEN_DECIMALS_CACHE_TTL = 86400;
 
     /**
      * HTTP client adapter for making JSON-RPC requests.
@@ -318,18 +329,85 @@ class EthereumDriver implements BlockchainDriverInterface
     }
 
     /**
-     * Get token balance for a specific ERC-20 token (stub).
+     * Get token balance for a specific ERC-20 token.
      *
-     * @param string $address The wallet address to query
-     * @param string $tokenAddress The ERC-20 token contract address
+     * Queries the ERC-20 token contract using the balanceOf(address) function
+     * and returns the balance in human-readable format (adjusted for decimals).
+     *
+     * Example usage:
+     * ```php
+     * // Get USDT balance (6 decimals)
+     * $usdtAddress = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+     * $balance = $driver->getTokenBalance($walletAddress, $usdtAddress);
+     *
+     * // Get DAI balance (18 decimals)
+     * $daiAddress = '0x6b175474e89094c44da98b954eedeac495271d0f';
+     * $balance = $driver->getTokenBalance($walletAddress, $daiAddress);
+     * ```
+     *
+     * @param string $address The wallet address to query (0x prefixed)
+     * @param string $tokenAddress The ERC-20 token contract address (0x prefixed)
      * @throws ConfigurationException If the driver is not connected
-     * @return float|null The token balance, or null (not yet implemented)
+     * @return float|null The token balance in human-readable format, or null if query fails
      */
     public function getTokenBalance(string $address, string $tokenAddress): ?float
     {
-        // TODO: TASK-005 - Implement ERC-20 token balance queries
-        // This will require calling the balanceOf method on the token contract
-        return null;
+        $this->ensureConnected();
+
+        // Validate address formats
+        if (!$this->validateAddress($address)) {
+            return null;
+        }
+        if (!$this->validateAddress($tokenAddress)) {
+            return null;
+        }
+
+        // Generate cache key for token balance
+        $cacheKey = CachePool::generateKey('getTokenBalance', [
+            'address' => $address,
+            'token' => $tokenAddress
+        ]);
+
+        // Check cache first
+        if ($this->cache->has($cacheKey)) {
+            return $this->cache->get($cacheKey);
+        }
+
+        try {
+            // Encode balanceOf function call
+            $data = Abi::encodeBalanceOf($address);
+
+            // Build transaction object for eth_call
+            $transaction = [
+                'to' => $tokenAddress,
+                'data' => $data
+            ];
+
+            // Execute eth_call
+            $result = $this->rpcCall('eth_call', [$transaction, 'latest']);
+
+            if ($result === null || $result === '0x') {
+                return null;
+            }
+
+            // Decode uint256 response
+            $balanceRaw = Abi::decodeResponse('uint256', $result);
+
+            // Get token decimals
+            $decimals = $this->getTokenDecimals($tokenAddress);
+
+            // Convert to float with correct decimals
+            $balance = $this->convertTokenBalance($balanceRaw, $decimals);
+
+            // Cache the result
+            $this->cache->set($cacheKey, $balance);
+
+            return $balance;
+        } catch (\Exception $e) {
+            // Log warning for debugging purposes (in production, use proper logging)
+            // For now, return null to indicate the balance could not be determined
+            return null;
+        }
     }
 
     /**
@@ -585,5 +663,92 @@ class EthereumDriver implements BlockchainDriverInterface
 
         // Simple ETH transfer
         return self::GAS_SIMPLE_TRANSFER;
+    }
+
+    /**
+     * Get the number of decimals for an ERC-20 token.
+     *
+     * Calls the decimals() function on the token contract and caches the result
+     * since token decimals don't change. Returns 18 (default) if the call fails.
+     *
+     * @param string $tokenAddress The ERC-20 token contract address
+     * @return int The number of decimals (usually 6, 8, or 18)
+     */
+    private function getTokenDecimals(string $tokenAddress): int
+    {
+        // Generate cache key for token decimals
+        $cacheKey = CachePool::generateKey('getTokenDecimals', ['token' => $tokenAddress]);
+
+        // Check cache first (decimals don't change)
+        if ($this->cache->has($cacheKey)) {
+            return $this->cache->get($cacheKey);
+        }
+
+        try {
+            // Encode decimals() function call
+            $data = Abi::encodeFunctionCall('decimals()', []);
+
+            // Build transaction object for eth_call
+            $transaction = [
+                'to' => $tokenAddress,
+                'data' => $data
+            ];
+
+            // Execute eth_call
+            $result = $this->rpcCall('eth_call', [$transaction, 'latest']);
+
+            if ($result === null || $result === '0x') {
+                // Return default if call fails
+                return self::DEFAULT_TOKEN_DECIMALS;
+            }
+
+            // Decode uint8 response (but we use uint256 decoder as it works for any size)
+            $decimalsStr = Abi::decodeResponse('uint256', $result);
+            $decimals = (int) $decimalsStr;
+
+            // Cache decimals with long TTL (24 hours)
+            $this->cache->set($cacheKey, $decimals, self::TOKEN_DECIMALS_CACHE_TTL);
+
+            return $decimals;
+        } catch (\Exception $e) {
+            // Return default decimals if call fails
+            return self::DEFAULT_TOKEN_DECIMALS;
+        }
+    }
+
+    /**
+     * Convert token balance from raw value to human-readable format.
+     *
+     * Uses BCMath for precision when dealing with large numbers and many decimals.
+     * For example, converts "1000000000000000000" (1 token with 18 decimals) to 1.0.
+     *
+     * @param string $balance Raw balance as string (from uint256 decoding)
+     * @param int $decimals Number of decimals for the token
+     * @return float The balance in human-readable format
+     */
+    private function convertTokenBalance(string $balance, int $decimals): float
+    {
+        // Handle zero balance
+        if ($balance === '0') {
+            return 0.0;
+        }
+
+        // Use BCMath for precision
+        if (function_exists('bcmul') && function_exists('bcdiv') && function_exists('bcpow')) {
+            // Calculate divisor: 10^decimals
+            $divisor = bcpow('10', (string) $decimals, 0);
+            
+            // Divide balance by divisor
+            $result = bcdiv($balance, $divisor, $decimals);
+            
+            return (float) $result;
+        }
+
+        // Fallback for systems without BCMath
+        // Precise token balance conversion requires BCMath. Throw exception if unavailable.
+        throw new \RuntimeException(
+            'BCMath extension is required for precise token balance conversion. ' .
+            'Please enable BCMath in your PHP installation.'
+        );
     }
 }
