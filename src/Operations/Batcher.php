@@ -222,7 +222,10 @@ class Batcher
 
         // Check if driver has sendBatch method
         if (!method_exists($this->driver, 'sendBatch')) {
-            throw new \RuntimeException('Driver claims to support batching but sendBatch method not found');
+            throw new \RuntimeException(sprintf(
+                'Driver %s claims to support batching but sendBatch method not found',
+                get_class($this->driver)
+            ));
         }
 
         // Prepare batch payloads
