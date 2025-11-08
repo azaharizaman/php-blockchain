@@ -1,0 +1,186 @@
+tasks:
+  create-driver:
+    id: "create-driver"
+    name: "Create New Blockchain Driver"
+    description: "Scaffold a new blockchain driver with interface implementation, tests, and documentation"
+    category: "generation"
+    scopes:
+      - "filesystem:write"
+    safety_flags:
+      requires_approval: true
+      allowed_paths:
+        - "src/Drivers/"
+        - "tests/Drivers/"
+        - "docs/drivers/"
+        - "README.md"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+        - ".git/*"
+    inputs:
+      - name: "driver_name"
+        type: "string"
+        required: true
+        description: "Name of the blockchain driver (e.g., 'ethereum', 'bitcoin')"
+        validation: "^[a-z][a-z0-9_]*$"
+      - name: "rpc_url"
+        type: "string"
+        required: false
+        description: "Default RPC URL for the driver"
+      - name: "network_type"
+        type: "string"
+        required: false
+        description: "Network type (e.g., 'mainnet', 'testnet')"
+    outputs:
+      - name: "files_created"
+        type: "array"
+        description: "List of files created"
+      - name: "driver_class"
+        type: "string"
+        description: "Fully qualified driver class name"
+
+  test-driver:
+    id: "test-driver"
+    name: "Test Blockchain Driver"
+    description: "Run comprehensive test suite for a blockchain driver including unit and integration tests"
+    category: "testing"
+    scopes:
+      - "filesystem:read"
+      - "network:read"
+    safety_flags:
+      requires_approval: false
+      allowed_paths:
+        - "tests/"
+        - "src/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+    inputs:
+      - name: "driver_name"
+        type: "string"
+        required: true
+        description: "Name of the driver to test"
+      - name: "test_type"
+        type: "string"
+        required: false
+        description: "Type of tests to run: 'unit', 'integration', or 'all'"
+    outputs:
+      - name: "test_results"
+        type: "object"
+        description: "Test execution results with pass/fail counts"
+      - name: "coverage"
+        type: "float"
+        description: "Code coverage percentage"
+
+  update-readme:
+    id: "update-readme"
+    name: "Update Documentation"
+    description: "Update README.md and driver documentation with current driver list and usage examples"
+    category: "documentation"
+    scopes:
+      - "filesystem:read"
+      - "filesystem:write"
+    safety_flags:
+      requires_approval: true
+      allowed_paths:
+        - "README.md"
+        - "docs/"
+        - "src/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+    inputs:
+      - name: "update_type"
+        type: "string"
+        required: false
+        description: "Type of update: 'drivers', 'api', 'examples', or 'all'"
+    outputs:
+      - name: "files_updated"
+        type: "array"
+        description: "List of documentation files updated"
+
+  run-static-analysis:
+    id: "run-static-analysis"
+    name: "Run Static Analysis"
+    description: "Execute PHPStan static analysis on the codebase and report issues"
+    category: "analysis"
+    scopes:
+      - "filesystem:read"
+    safety_flags:
+      requires_approval: false
+      allowed_paths:
+        - "src/"
+        - "tests/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+    inputs:
+      - name: "level"
+        type: "integer"
+        required: false
+        description: "PHPStan analysis level (0-9), default is 7"
+      - name: "paths"
+        type: "array"
+        required: false
+        description: "Specific paths to analyze"
+    outputs:
+      - name: "issues_found"
+        type: "array"
+        description: "List of issues found by static analysis"
+      - name: "total_errors"
+        type: "integer"
+        description: "Total number of errors found"
+
+  generate-tests:
+    id: "generate-tests"
+    name: "Generate Test Cases"
+    description: "Generate PHPUnit test cases for existing classes with comprehensive coverage"
+    category: "testing"
+    scopes:
+      - "filesystem:read"
+      - "filesystem:write"
+    safety_flags:
+      requires_approval: true
+      allowed_paths:
+        - "src/"
+        - "tests/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+    inputs:
+      - name: "class_name"
+        type: "string"
+        required: true
+        description: "Fully qualified class name to generate tests for"
+      - name: "test_types"
+        type: "array"
+        required: false
+        description: "Types of tests to generate: unit, integration, functional"
+    outputs:
+      - name: "test_file_created"
+        type: "string"
+        description: "Path to the generated test file"
+      - name: "test_count"
+        type: "integer"
+        description: "Number of test methods generated"
+
+metadata:
+  version: "1.0.0"
+  format_version: "1.0"
+  last_updated: "2025-11-08"
+  maintainer: "PHP Blockchain Agent System"
+  audit_log_path: "storage/agent-audit.log"
+  default_safety_flags:
+    requires_approval: true
+    max_file_size: 1048576  # 1MB
+    timeout: 300  # 5 minutes
+    deny_patterns:
+      - "*.env"
+      - "*.env.*"
+      - "*.key"
+      - "*.pem"
+      - "*.p12"
+      - ".git/*"
+      - "vendor/*"
+      - "node_modules/*"
+      - "storage/agent-audit.log"
