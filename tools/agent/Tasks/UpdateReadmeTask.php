@@ -226,7 +226,7 @@ class UpdateReadmeTask
         // Extract network type
         $networkType = 'Unknown';
         if (preg_match('/\*\s*@network-type\s+(evm|non-evm)/i', $content, $matches)) {
-            $networkType = ucfirst($matches[1]);
+            $networkType = $matches[1] === 'evm' ? 'EVM' : 'Non-EVM';
         } elseif (str_contains(strtolower($content), 'evm') && !str_contains(strtolower($content), 'non-evm')) {
             $networkType = 'EVM';
         } elseif (str_contains(strtolower($content), 'solana') || str_contains(strtolower($content), 'near')) {
