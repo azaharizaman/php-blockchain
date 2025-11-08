@@ -329,12 +329,11 @@ class Batcher
     {
         $message = $error->getMessage();
 
-        // Remove potential private keys or long hex strings (must come first to match longer strings)
+        // Remove potential addresses (0x... format with exactly 40 chars, word boundaries for exact match)
+        $message = preg_replace('/\b0x[a-fA-F0-9]{40}\b/', '0x[ADDRESS]', $message);
+
+        // Remove potential private keys or long hex strings (64+ chars)
         $message = preg_replace('/0x[a-fA-F0-9]{64,}/', '0x[SENSITIVE]', $message);
-
-        // Remove potential addresses (0x... format with exactly 40 chars)
-        $message = preg_replace('/0x[a-fA-F0-9]{40}/', '0x[ADDRESS]', $message);
-
         return $message;
     }
 }
