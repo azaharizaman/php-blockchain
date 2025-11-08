@@ -677,7 +677,7 @@ class EthereumDriverTest extends TestCase
             // Response for eth_call (balanceOf) - returns 1000 USDC (6 decimals)
             new Response(200, [], json_encode([
                 'jsonrpc' => '2.0',
-                'result' => '0x00000000000000000000000000000000000000000000000000000000ee6b2800', // 1000 * 10^6 = 4,000,000,000 in decimal = 0xee6b2800
+                'result' => '0x000000000000000000000000000000000000000000000000000000003b9aca00', // 1000 * 10^6 = 1,000,000,000 in decimal = 0x3b9aca00
                 'id' => 1
             ])),
             // Response for eth_call (decimals) - returns 6
