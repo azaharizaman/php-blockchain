@@ -222,7 +222,9 @@ class CreateDriverTask
         $path = $this->projectRoot . "/tests/Drivers/{$driverName}DriverTest.php";
         $this->ensureDirectoryExists(dirname($path));
         
-        file_put_contents($path, $code);
+        if (file_put_contents($path, $code) === false) {
+            throw new ValidationException("Failed to write test file to {$path}");
+        }
         
         return $path;
     }
@@ -239,7 +241,9 @@ class CreateDriverTask
         $path = $this->projectRoot . "/docs/drivers/" . strtolower($driverName) . ".md";
         $this->ensureDirectoryExists(dirname($path));
         
-        file_put_contents($path, $content);
+        if (file_put_contents($path, $content) === false) {
+            throw new ValidationException("Failed to write documentation file to {$path}");
+        }
         
         return $path;
     }
