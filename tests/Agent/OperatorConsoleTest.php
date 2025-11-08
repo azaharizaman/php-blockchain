@@ -27,10 +27,15 @@ class OperatorConsoleTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Clean up temporary test files
+        // Clean up temporary test files and directories
         foreach ($this->tempFiles as $file) {
             if (file_exists($file)) {
-                unlink($file);
+                if (is_file($file)) {
+                    unlink($file);
+                } elseif (is_dir($file)) {
+                    // Only remove if empty to avoid accidental deletion
+                    @rmdir($file);
+                }
             }
         }
         $this->tempFiles = [];

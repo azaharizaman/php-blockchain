@@ -44,6 +44,8 @@ class TaskRegistry
 
     /**
      * Get default registry path relative to project root.
+     *
+     * @return string
      */
     private function getDefaultRegistryPath(): string
     {
@@ -55,6 +57,7 @@ class TaskRegistry
     /**
      * Load task definitions from the registry YAML file.
      *
+     * @return void
      * @throws ConfigurationException If file not found or invalid YAML
      */
     private function loadRegistry(): void
@@ -100,6 +103,7 @@ class TaskRegistry
     /**
      * Validate loaded task definitions for integrity.
      *
+     * @return void
      * @throws ValidationException If task definitions are invalid
      */
     private function validateTasks(): void
@@ -168,6 +172,7 @@ class TaskRegistry
      * Check if a task exists in the registry.
      *
      * @param string $taskId Task identifier
+     * @return bool
      */
     public function hasTask(string $taskId): bool
     {
@@ -249,6 +254,8 @@ class TaskRegistry
 
     /**
      * Get the path to the audit log file.
+     *
+     * @return string
      */
     public function getAuditLogPath(): string
     {
@@ -324,10 +331,16 @@ class TaskRegistry
                 // Regex validation if specified
                 if (
                     isset($inputDef['validation']) &&
-                    is_string($value) &&
-                    !preg_match('/' . $inputDef['validation'] . '/', $value)
+                    is_string($value)
                 ) {
-                    $errors[$name] = "Input '{$name}' does not match validation pattern";
+                    // Use # as delimiter to avoid conflicts with /
+                    $pattern = '#' . str_replace('#', '\\#', $inputDef['validation']) . '#';
+                    $matchResult = @preg_match($pattern, $value);
+                    if ($matchResult === false) {
+                        $errors[$name] = "Input '{$name}' has an invalid validation pattern";
+                    } elseif ($matchResult === 0) {
+                        $errors[$name] = "Input '{$name}' does not match validation pattern";
+                    }
                 }
             }
         }
@@ -355,6 +368,10 @@ class TaskRegistry
         $task = $this->getTask($taskId);
         $safetyFlags = $task['safety_flags'] ?? [];
         
+        // Normalize the file path to prevent traversal attacks
+        // Remove any . or .. components and resolve to canonical path
+        $normalizedPath = $this->normalizePath($filePath);
+        
         // Check deny patterns first
         $denyPatterns = array_merge(
             $safetyFlags['deny_patterns'] ?? [],
@@ -364,7 +381,7 @@ class TaskRegistry
         foreach ($denyPatterns as $pattern) {
             // Convert glob pattern to regex
             $regex = $this->globToRegex($pattern);
-            if (preg_match($regex, $filePath)) {
+            if (preg_match($regex, $normalizedPath)) {
                 return false;
             }
         }
@@ -376,12 +393,43 @@ class TaskRegistry
         }
 
         foreach ($allowedPaths as $allowedPath) {
-            if (str_starts_with($filePath, $allowedPath)) {
+            // Normalize allowed path as well
+            $normalizedAllowed = $this->normalizePath($allowedPath);
+            if (str_starts_with($normalizedPath, $normalizedAllowed)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Normalize a file path to prevent traversal attacks.
+     *
+     * @param string $path Path to normalize
+     * @return string Normalized path
+     */
+    private function normalizePath(string $path): string
+    {
+        // Split path into components
+        $parts = explode('/', $path);
+        $normalized = [];
+        
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                continue; // Skip empty and current directory
+            }
+            if ($part === '..') {
+                // Go up one directory if possible
+                if (!empty($normalized)) {
+                    array_pop($normalized);
+                }
+            } else {
+                $normalized[] = $part;
+            }
+        }
+        
+        return implode('/', $normalized);
     }
 
     /**
@@ -392,9 +440,12 @@ class TaskRegistry
      */
     private function globToRegex(string $pattern): string
     {
+        // Replace glob wildcards with placeholders first
+        $pattern = str_replace(['*', '?'], ['__GLOB_STAR__', '__GLOB_QMARK__'], $pattern);
+        // Escape regex special characters
         $pattern = preg_quote($pattern, '/');
-        $pattern = str_replace('\*', '.*', $pattern);
-        $pattern = str_replace('\?', '.', $pattern);
+        // Replace placeholders with regex equivalents
+        $pattern = str_replace(['__GLOB_STAR__', '__GLOB_QMARK__'], ['.*', '.'], $pattern);
         return '/^' . $pattern . '$/';
     }
 }

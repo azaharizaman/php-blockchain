@@ -1,1 +1,2 @@
-# Agent audit logs are stored here\n*.log
+# Agent audit logs are stored here
+*.log

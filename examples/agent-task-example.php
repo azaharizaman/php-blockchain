@@ -125,7 +125,7 @@ try {
     
 } catch (Exception $e) {
     echo "Error: {$e->getMessage()}\n";
-    if (method_exists($e, 'getErrors')) {
+    if ($e instanceof \Blockchain\Exceptions\ValidationException) {
         $errors = $e->getErrors();
         if (!empty($errors)) {
             echo "Validation Errors:\n";

@@ -48,12 +48,14 @@ class OperatorConsole
 
     /**
      * Ensure the audit log directory exists.
+     *
+     * @return void
      */
     private function ensureAuditLogDirectory(): void
     {
         $directory = dirname($this->auditLogPath);
         if (!is_dir($directory)) {
-            mkdir($directory, 0755, true);
+            mkdir($directory, 0700, true);
         }
     }
 
@@ -162,14 +164,20 @@ class OperatorConsole
         }
         
         $line = fgets($handle);
+        if ($line === false) {
+            fclose($handle);
+            return false;
+        }
         fclose($handle);
         
-        $response = trim(strtolower($line ?: ''));
+        $response = trim(strtolower($line));
         return $response === 'y' || $response === 'yes';
     }
 
     /**
      * Get the current operator name.
+     *
+     * @return string
      */
     private function getCurrentOperator(): string
     {
@@ -216,10 +224,17 @@ class OperatorConsole
             'notes' => $notes,
         ];
 
-        $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES) . "\n";
+        $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        if ($logLine === false) {
+            throw new \RuntimeException("Failed to encode audit log entry to JSON.");
+        }
+        $logLine .= "\n";
         
         // Append to audit log
-        file_put_contents($this->auditLogPath, $logLine, FILE_APPEND | LOCK_EX);
+        $bytesWritten = file_put_contents($this->auditLogPath, $logLine, FILE_APPEND | LOCK_EX);
+        if ($bytesWritten === false) {
+            throw new \RuntimeException("Failed to write to audit log at '{$this->auditLogPath}'.");
+        }
     }
 
     /**
@@ -228,6 +243,7 @@ class OperatorConsole
      * @param TaskRegistry $registry Task registry
      * @param string $taskId Task identifier
      * @param array<string> $filePaths Paths to validate
+     * @return void
      * @throws ValidationException If any path is not allowed
      */
     public function validatePaths(
@@ -269,10 +285,27 @@ class OperatorConsole
             return [];
         }
 
-        $lines = file($this->auditLogPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if ($lines === false) {
+        $handle = fopen($this->auditLogPath, 'r');
+        if ($handle === false) {
             return [];
         }
+
+        // Acquire shared lock for reading
+        if (!flock($handle, LOCK_SH)) {
+            fclose($handle);
+            return [];
+        }
+
+        $lines = [];
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+        }
+
+        flock($handle, LOCK_UN);
+        fclose($handle);
 
         $entries = [];
         foreach (array_reverse($lines) as $line) {
@@ -339,6 +372,7 @@ class OperatorConsole
      * Set simulated approval for testing.
      *
      * @param bool|null $approval True to approve, false to deny, null to use interactive mode
+     * @return void
      */
     public function setSimulatedApproval(?bool $approval): void
     {
@@ -347,6 +381,8 @@ class OperatorConsole
 
     /**
      * Clear the audit log (for testing purposes only).
+     *
+     * @return void
      */
     public function clearAuditLog(): void
     {
