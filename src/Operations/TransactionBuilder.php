@@ -7,6 +7,7 @@ namespace Blockchain\Operations;
 use Blockchain\Contracts\BlockchainDriverInterface;
 use Blockchain\Wallet\WalletInterface;
 use Blockchain\Exceptions\TransactionException;
+use Blockchain\Operations\Idempotency;
 
 /**
  * TransactionBuilder
@@ -445,10 +446,15 @@ class TransactionBuilder
             $metadata['feePayer'] = $this->feePayer;
         }
 
-        // Placeholder for idempotency token (to be wired in TASK-005)
-        // if (isset($options['idempotencyToken'])) {
-        //     $metadata['idempotencyToken'] = $options['idempotencyToken'];
-        // }
+        // Add idempotency token (TASK-005)
+        // Generate if not provided in options
+        if (isset($options['idempotencyToken'])) {
+            $metadata['idempotencyToken'] = $options['idempotencyToken'];
+        } else {
+            // Generate deterministic token from wallet address and transaction payload
+            $hint = $this->wallet->getAddress() . '|' . json_encode($options, JSON_THROW_ON_ERROR);
+            $metadata['idempotencyToken'] = Idempotency::generate($hint);
+        }
 
         return $metadata;
     }

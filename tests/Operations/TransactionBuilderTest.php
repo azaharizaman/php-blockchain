@@ -293,6 +293,63 @@ class TransactionBuilderTest extends TestCase
 
         $this->assertEquals(42, $result['metadata']['nonce']);
     }
+
+    /**
+     * Test automatic idempotency token generation (TASK-005)
+     */
+    public function testAutomaticIdempotencyTokenGeneration(): void
+    {
+        $driver = new StubEthereumDriver();
+        $builder = new TransactionBuilder($driver, $this->wallet);
+
+        $result = $builder->buildTransfer(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            1.0
+        );
+
+        // Assert idempotency token is automatically generated
+        $this->assertArrayHasKey('idempotencyToken', $result['metadata']);
+        $this->assertIsString($result['metadata']['idempotencyToken']);
+        $this->assertEquals(64, strlen($result['metadata']['idempotencyToken']));
+    }
+
+    /**
+     * Test explicit idempotency token is preserved (TASK-005)
+     */
+    public function testExplicitIdempotencyTokenPreserved(): void
+    {
+        $driver = new StubEthereumDriver();
+        $builder = new TransactionBuilder($driver, $this->wallet);
+
+        $customToken = hash('sha256', 'my-custom-token');
+
+        $result = $builder->buildTransfer(
+            '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+            1.0,
+            ['idempotencyToken' => $customToken]
+        );
+
+        // Assert custom token is preserved
+        $this->assertEquals($customToken, $result['metadata']['idempotencyToken']);
+    }
+
+    /**
+     * Test idempotency token in contract call (TASK-005)
+     */
+    public function testIdempotencyTokenInContractCall(): void
+    {
+        $driver = new StubEthereumDriver();
+        $builder = new TransactionBuilder($driver, $this->wallet);
+
+        $result = $builder->buildContractCall(
+            'transfer',
+            ['to' => '0x123', 'value' => 1000]
+        );
+
+        // Assert idempotency token is present in contract calls too
+        $this->assertArrayHasKey('idempotencyToken', $result['metadata']);
+        $this->assertIsString($result['metadata']['idempotencyToken']);
+    }
 }
 
 /**
