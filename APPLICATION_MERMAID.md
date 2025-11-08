@@ -206,12 +206,12 @@ sequenceDiagram
         alt Success
             DRV-->>BA: txHash
             BA->>TRC: traceJobSuccess(jobId)
-            BA->>TRC: onBroadcastResult({success: true, ...})
+            %% BA->>TRC: onBroadcastResult({success: true, ...}) -- REMOVED, not called in implementation
             BA->>TQ: acknowledge(job)
         else Failure
             DRV-->>BA: Exception
             BA->>TRC: traceJobFailure(jobId, error)
-            BA->>TRC: onBroadcastResult({success: false, ...})
+            %% BA->>TRC: onBroadcastResult({success: false, ...}) -- REMOVED, not called in implementation
             BA->>TQ: recordFailure(job, error)
             TQ->>TRC: onEnqueued(job) [retry]
         end
