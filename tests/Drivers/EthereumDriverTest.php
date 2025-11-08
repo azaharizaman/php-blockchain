@@ -538,7 +538,7 @@ class EthereumDriverTest extends TestCase
         $driver->connect(['endpoint' => 'https://mainnet.infura.io/v3/test']);
 
         // Large contract data (not ERC-20 transfer)
-        // 200 bytes of data = 100 hex characters (without 0x)
+        // 400 hex characters (excluding '0x') = 200 bytes of data
         $largeData = '0x' . str_repeat('1234567890abcdef', 25); // 400 hex chars = 200 bytes
 
         $gasEstimate = $driver->estimateGas(
