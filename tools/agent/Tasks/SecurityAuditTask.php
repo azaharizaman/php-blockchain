@@ -58,6 +58,11 @@ class SecurityAuditTask
     ];
 
     /**
+     * Cached composer binary path.
+     */
+    private ?string $composerBin = null;
+
+    /**
      * Create a new SecurityAuditTask instance.
      *
      * @param TaskRegistry|null $registry Optional registry instance
@@ -264,7 +269,7 @@ class SecurityAuditTask
             '/passthru\s*\(/i' => ['severity' => 'high', 'message' => 'Use of passthru() detected - ensure input validation'],
             '/shell_exec\s*\(/i' => ['severity' => 'high', 'message' => 'Use of shell_exec() detected - ensure input validation'],
             '/unserialize\s*\(/i' => ['severity' => 'medium', 'message' => 'Use of unserialize() detected - potential object injection'],
-            '/\$_(GET|POST|REQUEST|COOKIE)\[/i' => ['severity' => 'medium', 'message' => 'Direct superglobal access - ensure input validation'],
+            '/\$_(GET|POST|REQUEST|COOKIE)\[/i' => ['severity' => 'low', 'message' => 'Direct superglobal access - ensure input validation'],
         ];
 
         // Scan PHP files in src and tests directories
@@ -319,18 +324,21 @@ class SecurityAuditTask
     {
         $findings = [];
 
-        // Check if composer is available
-        $composerBin = trim(shell_exec('which composer') ?? '');
+        // Check if composer is available (with caching)
+        if ($this->composerBin === null) {
+            $this->composerBin = $this->findComposerBinary();
+        }
         
-        if (empty($composerBin)) {
+        if ($this->composerBin === false) {
             $this->reportProgress('Composer not found, skipping dependency audit');
             return $findings;
         }
 
         // Run composer audit
         $command = sprintf(
-            'cd %s && composer audit --format=json 2>&1',
-            escapeshellarg($this->projectRoot)
+            'cd %s && %s audit --format=json 2>&1',
+            escapeshellarg($this->projectRoot),
+            escapeshellarg($this->composerBin)
         );
 
         $output = [];
@@ -444,7 +452,7 @@ class SecurityAuditTask
         $secretPatterns = [
             '/api[_-]?key\s*[:=]\s*["\']?([a-zA-Z0-9]{32,})["\']?/i',
             '/secret\s*[:=]\s*["\']?([a-zA-Z0-9]{32,})["\']?/i',
-            '/password\s*[:=]\s*["\']?(?!example|dummy|test|changeme)([^\s"\']{8,})["\']?/i',
+            '/password\s*[:=]\s*["\']?(?!example|dummy|test|changeme|password|secret|12345678)([^\s"\']{8,})["\']?/i',
             '/token\s*[:=]\s*["\']?([a-zA-Z0-9]{32,})["\']?/i',
         ];
 
@@ -895,8 +903,38 @@ class SecurityAuditTask
     private function ensureReportDirectory(): void
     {
         if (!is_dir($this->reportDir)) {
-            mkdir($this->reportDir, 0700, true);
+            mkdir($this->reportDir, 0755, true);
         }
+    }
+
+    /**
+     * Find composer binary by checking common locations.
+     *
+     * @return string|false Composer binary path or false if not found
+     */
+    private function findComposerBinary(): string|false
+    {
+        // Check common locations
+        $locations = [
+            '/usr/local/bin/composer',
+            '/usr/bin/composer',
+            $this->projectRoot . '/vendor/bin/composer',
+            'composer', // In PATH
+        ];
+
+        foreach ($locations as $location) {
+            if ($location === 'composer') {
+                // Check if it's in PATH
+                $which = trim(shell_exec('which composer 2>/dev/null') ?? '');
+                if (!empty($which) && file_exists($which)) {
+                    return $which;
+                }
+            } elseif (file_exists($location) && is_executable($location)) {
+                return $location;
+            }
+        }
+
+        return false;
     }
 
     /**

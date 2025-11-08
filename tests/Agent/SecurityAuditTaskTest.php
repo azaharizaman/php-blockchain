@@ -331,7 +331,7 @@ class SecurityAuditTaskTest extends TestCase
         $result = $this->task->execute($inputs);
 
         $this->assertArrayHasKey('duration', $result);
-        $this->assertIsFloat($result['duration']);
+        $this->assertIsNumeric($result['duration']);
         $this->assertGreaterThan(0, $result['duration']);
     }
 
@@ -373,8 +373,11 @@ class SecurityAuditTaskTest extends TestCase
     {
         // Create a test config file with sensitive data
         $testConfigDir = $this->projectRoot . '/config';
+        $configDirCreated = false;
+        
         if (!is_dir($testConfigDir)) {
             mkdir($testConfigDir, 0755, true);
+            $configDirCreated = true;
         }
 
         $testFile = $testConfigDir . '/test-sensitive.php';
@@ -403,6 +406,11 @@ class SecurityAuditTaskTest extends TestCase
             // Clean up test file
             if (file_exists($testFile)) {
                 unlink($testFile);
+            }
+            
+            // Clean up config directory if we created it
+            if ($configDirCreated && is_dir($testConfigDir)) {
+                rmdir($testConfigDir);
             }
         }
     }

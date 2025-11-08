@@ -408,13 +408,17 @@ class OperatorConsole
             'event_type' => 'task_execution',
         ], $eventData);
 
-        $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        $logLine .= "\n";
-        
-        // Append to audit log
-        $bytesWritten = file_put_contents($this->auditLogPath, $logLine, FILE_APPEND | LOCK_EX);
-        if ($bytesWritten === false) {
-            throw new \RuntimeException("Failed to write to audit log at '{$this->auditLogPath}'.");
+        try {
+            $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            $logLine .= "\n";
+            
+            // Append to audit log
+            $bytesWritten = file_put_contents($this->auditLogPath, $logLine, FILE_APPEND | LOCK_EX);
+            if ($bytesWritten === false) {
+                throw new \RuntimeException("Failed to write to audit log at '{$this->auditLogPath}'.");
+            }
+        } catch (\JsonException $e) {
+            throw new \RuntimeException("Failed to encode audit log entry to JSON: {$e->getMessage()}");
         }
     }
 }
