@@ -710,7 +710,7 @@ MD;
      */
     private function generateGetBalanceMethod(array $rpcMethods, string $networkType): string
     {
-        $rpcMethod = $networkType === 'evm' ? 'eth_getBalance' : 'getBalance';
+        
         
         return <<<'PHP'
     /**
