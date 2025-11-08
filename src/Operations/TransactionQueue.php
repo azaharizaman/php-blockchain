@@ -183,6 +183,11 @@ class TransactionQueue
      * ready yet, then re-enqueues them. This ensures proper ordering while
      * respecting timing constraints.
      *
+     * **Performance Note**: This implementation has O(n) complexity as it scans
+     * the entire queue on each call. For high-volume scenarios with many pending
+     * jobs, consider using a priority queue ordered by nextAvailableAt or
+     * implementing a more efficient ready-check mechanism.
+     *
      * @return TransactionJob|null Next available job or null if none ready
      */
     public function dequeue(): ?TransactionJob
@@ -331,9 +336,9 @@ class TransactionQueue
         $delay = min($delay, $this->maxBackoffSeconds);
 
         // Apply jitter
-        $delay = ($this->jitterFn)((int)$delay);
+        $delay = ($this->jitterFn)($delay);
 
-        return (int)$delay;
+        return $delay;
     }
 }
 
