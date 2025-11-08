@@ -516,6 +516,109 @@ class TransactionQueueTest extends TestCase
         $this->assertEquals('job-1', $dequeued->getId());
         $this->assertEquals(0, $queue->size());
     }
+
+    /**
+     * Test queue with idempotency store prevents duplicates (TASK-005)
+     */
+    public function testQueueWithIdempotencyStorePreventsDuplicates(): void
+    {
+        $store = new \Blockchain\Storage\InMemoryIdempotencyStore();
+        $queue = new TransactionQueue(
+            clockFn: fn() => $this->fakeClock->now(),
+            idempotencyStore: $store
+        );
+
+        $token = 'duplicate-token-123';
+
+        $job1 = new TransactionJob(
+            id: 'job-1',
+            payload: ['to' => '0x123', 'amount' => 1.0],
+            metadata: ['from' => '0x456'],
+            idempotencyToken: $token
+        );
+
+        $job2 = new TransactionJob(
+            id: 'job-2',
+            payload: ['to' => '0x123', 'amount' => 1.0],
+            metadata: ['from' => '0x456'],
+            idempotencyToken: $token // Same token
+        );
+
+        // Enqueue first job
+        $queue->enqueue($job1);
+        $this->assertEquals(1, $queue->size());
+
+        // Attempt to enqueue duplicate - should be skipped
+        $queue->enqueue($job2);
+        $this->assertEquals(1, $queue->size());
+
+        // Verify only first job is in queue
+        $dequeued = $queue->dequeue();
+        $this->assertEquals('job-1', $dequeued->getId());
+    }
+
+    /**
+     * Test queue without idempotency store allows all jobs (TASK-005)
+     */
+    public function testQueueWithoutIdempotencyStoreAllowsAllJobs(): void
+    {
+        $queue = new TransactionQueue(
+            clockFn: fn() => $this->fakeClock->now()
+            // No idempotency store
+        );
+
+        $token = 'duplicate-token-123';
+
+        $job1 = new TransactionJob(
+            id: 'job-1',
+            payload: ['to' => '0x123', 'amount' => 1.0],
+            metadata: ['from' => '0x456'],
+            idempotencyToken: $token
+        );
+
+        $job2 = new TransactionJob(
+            id: 'job-2',
+            payload: ['to' => '0x123', 'amount' => 1.0],
+            metadata: ['from' => '0x456'],
+            idempotencyToken: $token // Same token
+        );
+
+        // Without store, both jobs should be enqueued
+        $queue->enqueue($job1);
+        $queue->enqueue($job2);
+        $this->assertEquals(2, $queue->size());
+    }
+
+    /**
+     * Test queue with different tokens allows all jobs (TASK-005)
+     */
+    public function testQueueWithDifferentTokensAllowsAllJobs(): void
+    {
+        $store = new \Blockchain\Storage\InMemoryIdempotencyStore();
+        $queue = new TransactionQueue(
+            clockFn: fn() => $this->fakeClock->now(),
+            idempotencyStore: $store
+        );
+
+        $job1 = new TransactionJob(
+            id: 'job-1',
+            payload: ['to' => '0x123', 'amount' => 1.0],
+            metadata: ['from' => '0x456'],
+            idempotencyToken: 'token-1'
+        );
+
+        $job2 = new TransactionJob(
+            id: 'job-2',
+            payload: ['to' => '0x789', 'amount' => 2.0],
+            metadata: ['from' => '0xabc'],
+            idempotencyToken: 'token-2'
+        );
+
+        // Different tokens should both be enqueued
+        $queue->enqueue($job1);
+        $queue->enqueue($job2);
+        $this->assertEquals(2, $queue->size());
+    }
 }
 
 /**
