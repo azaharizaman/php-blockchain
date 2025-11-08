@@ -1,0 +1,157 @@
+id: "create-new-driver"
+name: "Create New Blockchain Driver"
+description: |
+  Automated task for scaffolding new blockchain drivers from RPC specifications.
+  Generates driver class, tests, and documentation following project conventions.
+  Supports both EVM and non-EVM blockchain networks.
+
+category: "generation"
+version: "1.0.0"
+
+scopes:
+  - "filesystem:write"
+  - "filesystem:read"
+  - "network:read"
+
+safety_flags:
+  requires_approval: true
+  allowed_paths:
+    - "src/Drivers/"
+    - "tests/Drivers/"
+    - "tests/fixtures/"
+    - "docs/drivers/"
+    - "README.md"
+  deny_patterns:
+    - "*.env"
+    - "*.env.*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - ".git/*"
+    - "vendor/*"
+    - "storage/agent-audit.log"
+  max_file_size: 1048576  # 1MB per file
+  timeout: 600  # 10 minutes
+
+inputs:
+  - name: "driver_name"
+    type: "string"
+    required: true
+    description: "Name of the blockchain driver (e.g., 'bitcoin', 'polygon', 'avalanche')"
+    validation: "^[A-Z][a-zA-Z0-9]*$"
+    example: "Bitcoin"
+  
+  - name: "spec_source"
+    type: "string"
+    required: true
+    description: "Path to RPC specification file or URL (supports OpenAPI JSON, JSON-RPC spec)"
+    validation: "^(https?://|/|\\./)"
+    example: "https://example.com/rpc-spec.json"
+  
+  - name: "network_type"
+    type: "string"
+    required: true
+    description: "Network type: 'evm' or 'non-evm'"
+    validation: "^(evm|non-evm)$"
+    example: "non-evm"
+  
+  - name: "auth_token"
+    type: "string"
+    required: false
+    description: "Optional authentication token for fetching spec from protected URLs"
+  
+  - name: "default_endpoint"
+    type: "string"
+    required: false
+    description: "Default RPC endpoint URL for the blockchain network"
+    example: "https://api.mainnet.example.com"
+  
+  - name: "native_currency"
+    type: "string"
+    required: false
+    description: "Native currency symbol (e.g., 'BTC', 'MATIC', 'AVAX')"
+    example: "BTC"
+  
+  - name: "decimals"
+    type: "integer"
+    required: false
+    description: "Number of decimals for native currency (default: 18 for EVM, 9 for non-EVM)"
+
+outputs:
+  - name: "files_created"
+    type: "array"
+    description: "List of generated file paths"
+  
+  - name: "driver_class"
+    type: "string"
+    description: "Fully qualified driver class name (e.g., 'Blockchain\\Drivers\\BitcoinDriver')"
+  
+  - name: "test_class"
+    type: "string"
+    description: "Fully qualified test class name"
+  
+  - name: "validation_results"
+    type: "object"
+    description: "Results from PHPStan and PHPUnit validation"
+  
+  - name: "next_steps"
+    type: "array"
+    description: "Follow-up actions for operator"
+
+guardrails:
+  - "Driver names must be unique and not conflict with existing drivers"
+  - "Generated files must pass PHPStan level 7 analysis"
+  - "All generated code must implement BlockchainDriverInterface"
+  - "Tests must achieve minimum 80% code coverage"
+  - "Specification must be valid OpenAPI 3.0+ or JSON-RPC 2.0 format"
+  - "Network operations require explicit operator approval"
+  - "No credentials or secrets in generated code"
+
+error_handling:
+  - error_type: "invalid_spec"
+    message: "Specification format not recognized or invalid"
+    recovery: "Verify spec format and try again"
+  
+  - error_type: "duplicate_driver"
+    message: "Driver with this name already exists"
+    recovery: "Choose a different driver name or delete existing driver"
+  
+  - error_type: "validation_failed"
+    message: "Generated code failed PHPStan or PHPUnit checks"
+    recovery: "Review generated code and fix issues manually"
+  
+  - error_type: "network_error"
+    message: "Failed to fetch specification from URL"
+    recovery: "Check network connectivity and URL accessibility"
+
+examples:
+  - name: "Generate Bitcoin driver from local spec"
+    inputs:
+      driver_name: "Bitcoin"
+      spec_source: "./specs/bitcoin-rpc.json"
+      network_type: "non-evm"
+      default_endpoint: "https://bitcoin.example.com"
+      native_currency: "BTC"
+      decimals: 8
+  
+  - name: "Generate Polygon driver from URL"
+    inputs:
+      driver_name: "Polygon"
+      spec_source: "https://docs.polygon.com/openapi.json"
+      network_type: "evm"
+      auth_token: "${POLYGON_API_KEY}"
+      default_endpoint: "https://polygon-rpc.com"
+      native_currency: "MATIC"
+
+post_generation_checks:
+  - "Run PHPStan analysis on generated driver class"
+  - "Run PHPUnit tests for generated test class"
+  - "Verify driver implements all BlockchainDriverInterface methods"
+  - "Check for TODO annotations requiring manual implementation"
+  - "Validate documentation snippets are properly formatted"
+  - "Ensure no sensitive data in generated files"
+
+documentation:
+  - "Generated driver documentation will be added to docs/drivers/{driver_name}.md"
+  - "README.md will be updated with new driver entry"
+  - "Usage examples will be generated based on spec methods"

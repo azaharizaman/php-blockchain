@@ -1,0 +1,387 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Solana JSON-RPC API",
+    "version": "1.17.0",
+    "description": "Solana blockchain RPC specification for driver generation"
+  },
+  "servers": [
+    {
+      "url": "https://api.mainnet-beta.solana.com",
+      "description": "Solana Mainnet Beta"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "summary": "JSON-RPC Endpoint",
+        "operationId": "jsonRpcCall",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/GetBalanceRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GetTransactionRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GetBlockRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GetTokenAccountsByOwnerRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GetEpochInfoRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/GetBalanceResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GetTransactionResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GetBlockResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GetTokenAccountsByOwnerResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GetEpochInfoResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GetBalanceRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "id", "method", "params"],
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": ["2.0"]
+          },
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "method": {
+            "type": "string",
+            "enum": ["getBalance"]
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array containing the public key as a base-58 encoded string"
+          }
+        }
+      },
+      "GetBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "object",
+                "properties": {
+                  "slot": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "value": {
+                "type": "integer",
+                "description": "Balance in lamports"
+              }
+            }
+          }
+        }
+      },
+      "GetTransactionRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "id", "method", "params"],
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": ["2.0"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["getTransaction"]
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            "description": "Transaction signature and optional config object"
+          }
+        }
+      },
+      "GetTransactionResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "slot": {
+                "type": "integer"
+              },
+              "transaction": {
+                "type": "object"
+              },
+              "meta": {
+                "type": "object"
+              },
+              "blockTime": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "GetBlockRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "id", "method", "params"],
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": ["2.0"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["getBlock"]
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            "description": "Slot number and optional config object"
+          }
+        }
+      },
+      "GetBlockResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "blockhash": {
+                "type": "string"
+              },
+              "previousBlockhash": {
+                "type": "string"
+              },
+              "parentSlot": {
+                "type": "integer"
+              },
+              "transactions": {
+                "type": "array"
+              },
+              "blockTime": {
+                "type": "integer"
+              },
+              "blockHeight": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "GetTokenAccountsByOwnerRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "id", "method", "params"],
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": ["2.0"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["getTokenAccountsByOwner"]
+          },
+          "params": {
+            "type": "array",
+            "description": "Owner public key, mint filter, and config object"
+          }
+        }
+      },
+      "GetTokenAccountsByOwnerResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "object"
+              },
+              "value": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "parsed": {
+                              "type": "object",
+                              "properties": {
+                                "info": {
+                                  "type": "object",
+                                  "properties": {
+                                    "tokenAmount": {
+                                      "type": "object",
+                                      "properties": {
+                                        "uiAmount": {
+                                          "type": "number"
+                                        },
+                                        "decimals": {
+                                          "type": "integer"
+                                        },
+                                        "amount": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "GetEpochInfoRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "id", "method"],
+        "properties": {
+          "jsonrpc": {
+            "type": "string",
+            "enum": ["2.0"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["getEpochInfo"]
+          }
+        }
+      },
+      "GetEpochInfoResponse": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "absoluteSlot": {
+                "type": "integer"
+              },
+              "blockHeight": {
+                "type": "integer"
+              },
+              "epoch": {
+                "type": "integer"
+              },
+              "slotIndex": {
+                "type": "integer"
+              },
+              "slotsInEpoch": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
