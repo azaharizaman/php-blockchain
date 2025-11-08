@@ -72,7 +72,6 @@ graph TB
     TB --> BD
     TB --> WI
     TB -.-> OTI
-    TQ --> BD
     TQ -.-> OTI
     BA --> TQ
     BA --> BD
