@@ -409,9 +409,6 @@ class OperatorConsole
         ], $eventData);
 
         $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        if ($logLine === false) {
-            throw new \RuntimeException("Failed to encode audit log entry to JSON.");
-        }
         $logLine .= "\n";
         
         // Append to audit log
