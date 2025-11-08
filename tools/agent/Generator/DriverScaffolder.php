@@ -86,6 +86,9 @@ class DriverScaffolder
 
         $methods = $this->generateDriverMethods($spec, $networkType, $decimals);
         
+        // Build the rpcCall method separately to avoid escaping issues
+        $rpcCallMethod = $this->generateRpcCallMethod($driverName);
+        
         $code = <<<PHP
 <?php
 
@@ -174,39 +177,7 @@ class {$className} implements BlockchainDriverInterface
 
 {$methods}
 
-    /**
-     * Make a JSON-RPC call to the {$driverName} node.
-     *
-     * @param string \$method The RPC method name
-     * @param array<int,mixed> \$params The method parameters
-     * @throws ConfigurationException If the driver is not connected
-     * @throws \\Exception If the RPC call fails or returns an error
-     * @return mixed The result field from the RPC response
-     */
-    private function rpcCall(string \$method, array \$params = []): mixed
-    {
-        \$this->ensureConnected();
-
-        // Build JSON-RPC payload
-        \$payload = [
-            'jsonrpc' => '2.0',
-            'method' => \$method,
-            'params' => \$params,
-            'id' => 1,
-        ];
-
-        // Make HTTP POST request
-        \$response = \$this->httpClient->post('', \$payload);
-
-        // Check for RPC error
-        if (isset(\$response['error'])) {
-            \$errorMessage = \$response['error']['message'] ?? 'Unknown RPC error';
-            throw new \\Exception(\"{$driverName} RPC Error: {\$errorMessage}\");
-        }
-
-        // Return result field
-        return \$response['result'] ?? null;
-    }
+{$rpcCallMethod}
 
     /**
      * Ensure the driver is connected before performing operations.
@@ -1128,10 +1099,50 @@ PHP;
     }
 PHP;
     }
-}
 
+    /**
+     * Generate RPC call method with proper escaping.
+     *
+     * @param string $driverName Name of the driver
+     * @return string RPC call method code
+     */
+    private function generateRpcCallMethod(string $driverName): string
+    {
+        return <<<'PHP'
+    /**
+     * Make a JSON-RPC call to the blockchain node.
+     *
+     * @param string $method The RPC method name
+     * @param array<int,mixed> $params The method parameters
+     * @throws ConfigurationException If the driver is not connected
+     * @throws \Exception If the RPC call fails or returns an error
+     * @return mixed The result field from the RPC response
+     */
+    private function rpcCall(string $method, array $params = []): mixed
+    {
+        $this->ensureConnected();
+
+        // Build JSON-RPC payload
+        $payload = [
+            'jsonrpc' => '2.0',
+            'method' => $method,
+            'params' => $params,
+            'id' => 1,
+        ];
+
+        // Make HTTP POST request
+        $response = $this->httpClient->post('', $payload);
+
+        // Check for RPC error
+        if (isset($response['error'])) {
+            $errorMessage = $response['error']['message'] ?? 'Unknown RPC error';
+            throw new \Exception("RPC Error: {$errorMessage}");
+        }
+
+        // Return result field
+        return $response['result'] ?? null;
+    }
 PHP;
-        return $code;
     }
 }
 
