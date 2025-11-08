@@ -193,7 +193,7 @@ interface WalletInterface
      *
      * Ethereum & EVM-compatible chains:
      * - Returns checksummed address (0x-prefixed, 40 hex characters)
-     * - Example: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+     * - Example: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0
      *
      * Solana:
      * - Returns base58-encoded address (32-44 characters)
