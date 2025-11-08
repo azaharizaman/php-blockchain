@@ -813,37 +813,37 @@ PHP;
     {
         $rpcMethod = $networkType === 'evm' ? 'eth_getTransactionByHash' : 'getTransaction';
         
-        return <<<'PHP'
+        return <<<PHP
     /**
      * Get transaction details by hash.
      *
-     * @param string $hash The transaction hash
+     * @param string \$hash The transaction hash
      * @throws ConfigurationException If the driver is not connected
      * @throws \Exception If the transaction query fails
      * @return array<string,mixed> Transaction details
      */
-    public function getTransaction(string $hash): array
+    public function getTransaction(string \$hash): array
     {
-        $this->ensureConnected();
+        \$this->ensureConnected();
 
         // Generate cache key
-        $cacheKey = CachePool::generateKey('getTransaction', ['hash' => $hash]);
+        \$cacheKey = CachePool::generateKey('{$rpcMethod}', ['hash' => \$hash]);
 
         // Check cache first
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
+        if (\$this->cache->has(\$cacheKey)) {
+            return \$this->cache->get(\$cacheKey);
         }
 
-        $transaction = $this->rpcCall('getTransaction', [$hash]);
+        \$transaction = \$this->rpcCall('{$rpcMethod}', [\$hash]);
 
-        if ($transaction === null) {
+        if (\$transaction === null) {
             return [];
         }
 
         // Store in cache
-        $this->cache->set($cacheKey, $transaction, 3600);
+        \$this->cache->set(\$cacheKey, \$transaction, 3600);
 
-        return $transaction;
+        return \$transaction;
     }
 PHP;
     }
