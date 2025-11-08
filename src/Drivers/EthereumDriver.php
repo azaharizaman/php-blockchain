@@ -49,6 +49,17 @@ class EthereumDriver implements BlockchainDriverInterface
      * Gas cost per zero byte in transaction data.
      */
     private const GAS_PER_ZERO_BYTE = 4;
+
+    /**
+     * Number of Wei per ETH (10^18).
+     */
+    private const WEI_PER_ETH = '1000000000000000000';
+
+    /**
+     * Number of decimal places for Wei (18).
+     */
+    private const WEI_DECIMALS = 18;
+
     /**
      * HTTP client adapter for making JSON-RPC requests.
      */
@@ -456,7 +467,7 @@ class EthereumDriver implements BlockchainDriverInterface
         // Convert ETH to Wei (1 ETH = 10^18 Wei)
         // Use bcmath for precision if available
         if (function_exists('bcmul')) {
-            $wei = bcmul((string) $eth, '1000000000000000000', 0);
+            $wei = bcmul((string) $eth, self::WEI_PER_ETH, 0);
             
             // Convert to hexadecimal using bc functions
             if (function_exists('bcdiv') && function_exists('bcmod')) {
@@ -467,15 +478,15 @@ class EthereumDriver implements BlockchainDriverInterface
         // Fallback to GMP if available (better than float for large numbers)
         if (function_exists('gmp_init')) {
             // Convert to string to avoid float precision issues
-            $ethStr = number_format($eth, 18, '.', '');
+            $ethStr = number_format($eth, self::WEI_DECIMALS, '.', '');
             $parts = explode('.', $ethStr);
             $wholePart = $parts[0];
             $decimalPart = isset($parts[1]) ? $parts[1] : '0';
             
             // Calculate wei: whole_part * 10^18 + decimal_part * 10^(18-len(decimal))
-            $weiFromWhole = gmp_mul($wholePart, gmp_pow(10, 18));
+            $weiFromWhole = gmp_mul($wholePart, gmp_pow(10, self::WEI_DECIMALS));
             $decimalLen = strlen($decimalPart);
-            $weiFromDecimal = gmp_mul($decimalPart, gmp_pow(10, 18 - $decimalLen));
+            $weiFromDecimal = gmp_mul($decimalPart, gmp_pow(10, self::WEI_DECIMALS - $decimalLen));
             $totalWei = gmp_add($weiFromWhole, $weiFromDecimal);
             
             return '0x' . gmp_strval($totalWei, 16);
@@ -483,14 +494,14 @@ class EthereumDriver implements BlockchainDriverInterface
 
         // Last resort: use string manipulation (less precise but handles larger numbers)
         // This approach works for most practical amounts
-        $weiFloat = $eth * 1e18;
+        $weiFloat = $eth * (float) self::WEI_PER_ETH;
         
         // For small amounts (< 9.2 ETH), simple conversion works
         if ($weiFloat < PHP_INT_MAX) {
             return '0x' . dechex((int) $weiFloat);
         }
         
-        // For larger amounts, use sprintf with scientific notation
+        // For larger amounts, use sprintf to convert float to decimal string
         $weiStr = sprintf('%.0f', $weiFloat);
         return '0x' . $this->decToHex($weiStr);
     }
