@@ -745,8 +745,10 @@ class EthereumDriver implements BlockchainDriverInterface
         }
 
         // Fallback for systems without BCMath
-        // This is less precise but works for most practical cases
-        $divisor = pow(10, $decimals);
-        return (float) $balance / $divisor;
+        // Precise token balance conversion requires BCMath. Throw exception if unavailable.
+        throw new \RuntimeException(
+            'BCMath extension is required for precise token balance conversion. ' .
+            'Please enable BCMath in your PHP installation.'
+        );
     }
 }
