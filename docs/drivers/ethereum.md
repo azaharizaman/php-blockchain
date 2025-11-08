@@ -243,6 +243,8 @@ Block Number: 18123456
 
 ## ERC-20 Token Examples
 
+> **Note**: The EthereumDriver currently provides ABI encoding utilities for ERC-20 interactions, but the `getTokenBalance()` method is not yet fully implemented (returns null). Full implementation is planned for TASK-005. The examples below demonstrate the intended usage pattern once implementation is complete.
+
 ### Get Token Balance
 
 ```php
