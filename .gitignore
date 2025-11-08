@@ -5,8 +5,8 @@ composer.lock
 composer-setup.php
 
 # PHPUnit
-/phpunit.xml
 /.phpunit.result.cache
+/.phpunit.cache
 /coverage/
 /build/
 

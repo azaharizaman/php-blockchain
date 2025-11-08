@@ -14,6 +14,7 @@ jobs:
     env:
       # propagate secret into env so it can be used in an if without referencing secrets directly
       RUN_INTEGRATION_TESTS: ${{ secrets.RUN_INTEGRATION_TESTS }}
+      ETHEREUM_RPC_ENDPOINT: ${{ secrets.ETHEREUM_RPC_ENDPOINT }}
 
     steps:
       - name: Checkout
@@ -46,11 +47,14 @@ jobs:
 
       - name: Run integration tests (optional)
         if: env.RUN_INTEGRATION_TESTS == 'true'
+        env:
+          RUN_INTEGRATION_TESTS: 'true'
+          ETHEREUM_RPC_ENDPOINT: ${{ secrets.ETHEREUM_RPC_ENDPOINT }}
         run: |
           echo "RUN_INTEGRATION_TESTS=true — running integration tests (ensure network access allowed by operator)"
           # Integration tests should be restricted to testnets and gated by this secret.
           if [ -d tests/Integration ]; then
-            vendor/bin/phpunit --testsuite integration || (echo "Integration tests failed" && exit 1)
+            composer run integration-test || (echo "Integration tests failed" && exit 1)
           else
             echo "No integration tests found. Skipping."
           fi

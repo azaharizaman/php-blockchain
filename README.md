@@ -530,10 +530,14 @@ $registry->registerDriverInstance('solana', $solanaDriver);
 
 ## 🧪 Testing
 
-Run the test suite:
+The package includes comprehensive unit tests and optional integration tests.
+
+### Unit Tests
+
+Unit tests use mocked responses and do not require network access:
 
 ```bash
-# Run all tests
+# Run all unit tests
 composer test
 
 # Run tests with coverage
@@ -548,6 +552,53 @@ composer cs-check
 # Fix coding standards
 composer cs-fix
 ```
+
+### Integration Tests
+
+Integration tests connect to real blockchain test networks (e.g., Sepolia for Ethereum) to validate actual network interactions. These tests are **optional** and gated by environment variables.
+
+#### Prerequisites
+
+1. Set `RUN_INTEGRATION_TESTS=true` to enable integration tests
+2. Set `ETHEREUM_RPC_ENDPOINT` to a valid testnet RPC URL
+
+#### Getting Free RPC Endpoints
+
+- **Infura**: Sign up at [infura.io](https://infura.io/) and use: `https://sepolia.infura.io/v3/YOUR_PROJECT_ID`
+- **Alchemy**: Sign up at [alchemy.com](https://www.alchemy.com/) and use: `https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`
+- **Public**: Use `https://rpc.sepolia.org` (may have rate limits)
+
+#### Running Integration Tests
+
+```bash
+# Method 1: Export environment variables
+export RUN_INTEGRATION_TESTS=true
+export ETHEREUM_RPC_ENDPOINT=https://sepolia.infura.io/v3/YOUR_PROJECT_ID
+composer run integration-test
+
+# Method 2: Inline
+RUN_INTEGRATION_TESTS=true ETHEREUM_RPC_ENDPOINT=https://sepolia.infura.io/v3/YOUR_PROJECT_ID composer run integration-test
+
+# Method 3: Using .env file (not committed to repo)
+echo "RUN_INTEGRATION_TESTS=true" >> .env
+echo "ETHEREUM_RPC_ENDPOINT=https://sepolia.infura.io/v3/YOUR_PROJECT_ID" >> .env
+export $(cat .env | xargs)
+composer run integration-test
+```
+
+#### What Integration Tests Cover
+
+- ✅ Connection to Sepolia testnet
+- ✅ Network info and chain ID validation
+- ✅ Balance retrieval from real addresses
+- ✅ Transaction and block queries
+- ✅ Gas estimation with real network
+- ✅ ERC-20 token balance retrieval
+- ✅ Error handling and rate limiting
+
+**Note**: Integration tests will be automatically skipped if `RUN_INTEGRATION_TESTS` is not set to `true`.
+
+For detailed testing instructions, see [TESTING.md](TESTING.md).
 
 ## 🤖 Agent Integration
 
