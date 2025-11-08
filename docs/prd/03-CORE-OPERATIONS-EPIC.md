@@ -23,3 +23,35 @@ Provide a unified set of core blockchain operations available across drivers (ba
 - Gas estimation returns sensible defaults and can be overridden by driver-specific strategies.
 - Transaction history and pagination return consistent and well-documented data shapes.
 - Instrumentation hooks emit basic metrics in CI test runs (mockable).
+
+---
+
+### Changelog
+
+#### 2025-11-08: Runtime Recovery & Service Layer Integration
+
+**Changes**:
+- **Automatic Error Recovery**: All core operations (getBalance, sendTransaction, getTransaction) will be wrapped with retry policies, circuit breakers, and fallback mechanisms from Exception Handling Epic (Epic 11).
+- **Service Layer Architecture**: Core operations will be exposed through service interfaces (TransactionServiceInterface, BalanceServiceInterface) as defined in Integration API Epic (Epic 12).
+- **Data Transfer Objects**: Operation requests and responses will use standardized DTOs (TransactionRequest, TransactionResponse, BalanceQuery, BalanceResult) from Epic 12.
+- **Middleware Pipeline**: Operations will pass through middleware pipeline for logging, validation, caching, and metrics from Epic 12.
+- **Event Emission**: Operations will emit events (TransactionSentEvent, BalanceFetchedEvent) for extensibility and monitoring.
+- **Strategy Pattern**: Gas estimation and fee calculation will use strategy pattern allowing pluggable implementations.
+
+**Impact**:
+- Operations become more resilient with automatic retry and fallback
+- Clear service boundaries improve testability and maintainability
+- Consistent DTOs improve type safety and API clarity
+- Middleware enables cross-cutting concerns without code duplication
+- Events enable monitoring and custom business logic
+
+**Related Epics**:
+- Epic 11: Exception Handling & Error Management (retry, circuit breaker, fallback)
+- Epic 12: Integration API & Internal Extensibility (services, DTOs, middleware, events)
+
+**Action Required**:
+- Review existing operation implementations for service extraction
+- Prepare for DTO-based request/response patterns
+- Update tests to work with service layer and middleware
+- Consider custom strategies for gas estimation if needed
+

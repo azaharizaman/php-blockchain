@@ -22,3 +22,36 @@ Ensure the SDK enforces secure practices and robust reliability measures so that
 - Retry and rate-limiting policies are configurable and unit-tested.
 - Examples and docs exist demonstrating secure key usage (env variables, HSM integration patterns).
 - Transport security defaults to TLS and warns when connecting to non-HTTPS endpoints.
+
+---
+
+### Changelog
+
+#### 2025-11-08: Advanced Retry Mechanisms & Extensibility Hooks
+
+**Changes**:
+- **Comprehensive Retry Framework**: Retry strategies and policies are now extensively covered in Exception Handling Epic (Epic 11) with exponential backoff, jitter, conditional retry, and retry budgets.
+- **Circuit Breaker Integration**: Circuit breaker pattern from Epic 11 prevents cascading failures and provides automatic failure detection and recovery.
+- **Structured Error Logging**: Error logging is enhanced with structured context, PSR-3 integration, sensitive data redaction, and correlation IDs from Epic 11.
+- **Plugin-Based Security Extensions**: Security features can be extended through plugin system from Integration API Epic (Epic 12), enabling custom validation, authentication, and audit logging.
+- **Middleware for Security**: Security concerns (rate limiting, validation, sanitization) implemented as middleware from Epic 12 for reusability and testability.
+- **Configuration Security**: Enhanced configuration system from Epic 12 provides validation, type safety, and secure defaults for security-sensitive settings.
+
+**Impact**:
+- Retry mechanisms become more sophisticated with multiple strategies
+- Circuit breaker prevents resource exhaustion from repeated failures
+- Logging provides better debugging without security risks
+- Security features are more modular and extensible
+- Rate limiting can be applied consistently via middleware
+
+**Related Epics**:
+- Epic 11: Exception Handling & Error Management (retry, circuit breaker, logging)
+- Epic 12: Integration API & Internal Extensibility (plugins, middleware, configuration)
+
+**Action Required**:
+- Migrate existing retry logic to new retry framework
+- Implement circuit breaker for critical operations
+- Review logging for sensitive data exposure
+- Consider custom security plugins for enterprise requirements
+- Update rate limiting to use middleware pattern
+

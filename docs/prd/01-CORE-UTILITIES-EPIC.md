@@ -24,3 +24,32 @@ Provide the foundational modules, interfaces, and utilities that all drivers and
 - Driver registration and discovery works with at least one registered driver (Solana) in CI.
 - Utility helpers have unit tests and adhere to PSR-12 standards.
 - Error and exception flows are predictable and documented.
+
+---
+
+### Changelog
+
+#### 2025-11-08: Enhanced Exception Handling & Extensibility Integration
+
+**Changes**:
+- **Extended Exception Requirements**: Core exception classes (ConfigurationException, UnsupportedDriverException, TransactionException, ValidationException) will be enhanced with error codes, context enrichment, and standardized error messages as part of the Exception Handling Epic (Epic 11).
+- **Service Abstraction**: Core utilities will integrate with the Service Layer architecture from the Integration API Epic (Epic 12), providing service interfaces for core operations.
+- **Event System Integration**: Core components will emit events (DriverRegistered, DriverConnected) through the event system defined in Epic 12.
+- **DI Container**: Core utilities will support dependency injection through the PSR-11 container from Epic 12.
+- **Configuration Enhancement**: Configuration system will be enhanced with hierarchical configuration and validation from Epic 12.
+
+**Impact**:
+- Exception classes remain backward compatible but gain new capabilities
+- Core interfaces remain stable, implementation enhanced with service layer
+- Driver registration triggers events for extensibility
+- Configuration system becomes more robust and validatable
+
+**Related Epics**:
+- Epic 11: Exception Handling & Error Management
+- Epic 12: Integration API & Internal Extensibility
+
+**Action Required**:
+- Review exception usage in existing drivers
+- Prepare for event system integration in driver lifecycle
+- Update configuration to use new hierarchical format (backward compatible)
+
