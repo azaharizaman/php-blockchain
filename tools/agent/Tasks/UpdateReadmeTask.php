@@ -435,6 +435,9 @@ class UpdateReadmeTask
     {
         $readmePath = $this->projectRoot . '/README.md';
         $oldContent = file_get_contents($readmePath);
+        if ($oldContent === false) {
+            return [];
+        }
 
         // Generate new table
         $table = "| Blockchain | Status | Driver Class | Network Type | Documentation |\n";
