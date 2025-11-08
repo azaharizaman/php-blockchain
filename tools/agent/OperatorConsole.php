@@ -390,4 +390,34 @@ class OperatorConsole
             file_put_contents($this->auditLogPath, '');
         }
     }
+
+    /**
+     * Log a generic audit event (for task executions, not just approvals).
+     *
+     * @param string $taskId Task identifier
+     * @param array<string, mixed> $eventData Event data to log
+     * @return void
+     */
+    public function logAuditEvent(string $taskId, array $eventData): void
+    {
+        $timestamp = date('Y-m-d H:i:s T');
+        
+        $logEntry = array_merge([
+            'timestamp' => $timestamp,
+            'task_id' => $taskId,
+            'event_type' => 'task_execution',
+        ], $eventData);
+
+        $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        if ($logLine === false) {
+            throw new \RuntimeException("Failed to encode audit log entry to JSON.");
+        }
+        $logLine .= "\n";
+        
+        // Append to audit log
+        $bytesWritten = file_put_contents($this->auditLogPath, $logLine, FILE_APPEND | LOCK_EX);
+        if ($bytesWritten === false) {
+            throw new \RuntimeException("Failed to write to audit log at '{$this->auditLogPath}'.");
+        }
+    }
 }
