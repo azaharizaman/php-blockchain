@@ -52,12 +52,12 @@ print_r($networkInfo);
 
 ## 🌐 Supported Blockchains
 
-| Blockchain | Status | Driver Class | Network Type |
-|------------|--------|--------------|--------------|
-| Solana     | ✅ Ready | `SolanaDriver` | Non-EVM |
-| Ethereum   | 🔄 Planned | `EthereumDriver` | EVM |
-| Polygon    | 🔄 Planned | `PolygonDriver` | EVM |
-| Near       | 🔄 Planned | `NearDriver` | Non-EVM |
+| Blockchain | Status | Driver Class | Network Type | Documentation |
+|------------|--------|--------------|--------------|---------------|
+| Solana     | ✅ Ready | `SolanaDriver` | Non-EVM | [docs/drivers/solana.md](docs/drivers/solana.md) |
+| Ethereum   | ✅ Ready | `EthereumDriver` | EVM | [docs/drivers/ethereum.md](docs/drivers/ethereum.md) |
+| Polygon    | 🔄 Planned | `PolygonDriver` | EVM | - |
+| Near       | 🔄 Planned | `NearDriver` | Non-EVM | - |
 
 ## 📚 Usage Examples
 
