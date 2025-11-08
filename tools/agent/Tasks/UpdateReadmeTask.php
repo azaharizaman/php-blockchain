@@ -483,14 +483,18 @@ class UpdateReadmeTask
         $additions = 0;
         $deletions = 0;
 
+        // Use hash maps for O(1) lookups
+        $oldLinesMap = array_flip($oldLines);
+        $newLinesMap = array_flip($newLines);
+
         foreach ($newLines as $line) {
-            if (!in_array($line, $oldLines, true)) {
+            if (!isset($oldLinesMap[$line])) {
                 $additions++;
             }
         }
 
         foreach ($oldLines as $line) {
-            if (!in_array($line, $newLines, true)) {
+            if (!isset($newLinesMap[$line])) {
                 $deletions++;
             }
         }
