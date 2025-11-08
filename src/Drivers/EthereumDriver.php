@@ -21,6 +21,46 @@ use Blockchain\Utils\CachePool;
 class EthereumDriver implements BlockchainDriverInterface
 {
     /**
+     * Gas estimation safety buffer multiplier.
+     */
+    private const GAS_SAFETY_BUFFER = 1.2;
+
+    /**
+     * Gas cost for simple ETH transfer (21,000 gas).
+     */
+    private const GAS_SIMPLE_TRANSFER = 21000;
+
+    /**
+     * Gas cost for ERC-20 token transfer (~65,000 gas).
+     */
+    private const GAS_ERC20_TRANSFER = 65000;
+
+    /**
+     * Base gas cost for contract interactions (~100,000 gas).
+     */
+    private const GAS_CONTRACT_BASE = 100000;
+
+    /**
+     * Gas cost per non-zero byte in transaction data.
+     */
+    private const GAS_PER_NONZERO_BYTE = 68;
+
+    /**
+     * Gas cost per zero byte in transaction data.
+     */
+    private const GAS_PER_ZERO_BYTE = 4;
+
+    /**
+     * Number of Wei per ETH (10^18).
+     */
+    private const WEI_PER_ETH = '1000000000000000000';
+
+    /**
+     * Number of decimal places for Wei (18).
+     */
+    private const WEI_DECIMALS = 18;
+
+    /**
      * HTTP client adapter for making JSON-RPC requests.
      */
     private ?GuzzleAdapter $httpClient = null;
@@ -224,20 +264,57 @@ class EthereumDriver implements BlockchainDriverInterface
     }
 
     /**
-     * Estimate gas for a transaction (stub).
+     * Estimate gas for a transaction.
+     *
+     * Calls eth_estimateGas JSON-RPC method to estimate the gas required for a transaction.
+     * Applies a 1.2x safety buffer to the estimate. Falls back to heuristic estimates
+     * if the RPC call fails.
      *
      * @param string $from The sender's blockchain address
      * @param string $to The recipient's blockchain address
      * @param float $amount The amount to transfer in ETH
-     * @param array<string,mixed> $options Additional transaction options
+     * @param array<string,mixed> $options Additional transaction options (e.g., 'data' for contract calls)
      * @throws ConfigurationException If the driver is not connected
-     * @return int|null Estimated gas units, or null (not yet implemented)
+     * @throws \InvalidArgumentException If address format is invalid
+     * @return int|null Estimated gas units with safety buffer applied
      */
     public function estimateGas(string $from, string $to, float $amount, array $options = []): ?int
     {
-        // TODO: TASK-004 - Implement gas estimation
-        // This will use eth_estimateGas RPC method
-        return null;
+        $this->ensureConnected();
+
+        // Validate address formats
+        if (!$this->validateAddress($from)) {
+            throw new \InvalidArgumentException("Invalid Ethereum address format for 'from': {$from}");
+        }
+        if (!$this->validateAddress($to)) {
+            throw new \InvalidArgumentException("Invalid Ethereum address format for 'to': {$to}");
+        }
+
+        try {
+            // Build transaction object for eth_estimateGas
+            $transaction = [
+                'from' => $from,
+                'to' => $to,
+                'value' => $this->ethToWei($amount),
+            ];
+
+            // Add optional data field for contract interactions
+            if (isset($options['data'])) {
+                $transaction['data'] = $options['data'];
+            }
+
+            // Call eth_estimateGas
+            $gasHex = $this->rpcCall('eth_estimateGas', [$transaction]);
+
+            // Convert hex result to integer
+            $gasEstimate = $this->hexToInt($gasHex);
+
+            // Apply safety buffer
+            return (int) ($gasEstimate * self::GAS_SAFETY_BUFFER);
+        } catch (\Exception $e) {
+            // Use fallback heuristics when RPC call fails
+            return $this->estimateGasFallback($from, $to, $amount, $options);
+        }
     }
 
     /**
@@ -374,5 +451,139 @@ class EthereumDriver implements BlockchainDriverInterface
         if ($this->httpClient === null || empty($this->endpoint)) {
             throw new ConfigurationException('Ethereum driver is not connected. Please call connect() first.');
         }
+    }
+
+    /**
+     * Convert ETH amount to Wei in hexadecimal format.
+     *
+     * This method handles large numbers correctly by using bcmath when available,
+     * or falling back to GMP for arbitrary precision arithmetic.
+     *
+     * @param float $eth The amount in ETH
+     * @return string The amount in Wei as hex string with 0x prefix
+     */
+    private function ethToWei(float $eth): string
+    {
+        // Convert ETH to Wei (1 ETH = 10^18 Wei)
+        // Use bcmath for precision if available
+        if (function_exists('bcmul')) {
+            $wei = bcmul((string) $eth, self::WEI_PER_ETH, 0);
+            
+            // Convert to hexadecimal using bc functions
+            if (function_exists('bcdiv') && function_exists('bcmod')) {
+                return '0x' . $this->decToHex($wei);
+            }
+        }
+
+        // Fallback to GMP if available (better than float for large numbers)
+        if (function_exists('gmp_init')) {
+            // Convert to string to avoid float precision issues
+            $ethStr = number_format($eth, self::WEI_DECIMALS, '.', '');
+            $parts = explode('.', $ethStr);
+            $wholePart = $parts[0];
+            $decimalPart = isset($parts[1]) ? $parts[1] : '0';
+            
+            // Calculate wei: whole_part * 10^18 + decimal_part * 10^(18-len(decimal))
+            $weiFromWhole = gmp_mul($wholePart, gmp_pow(10, self::WEI_DECIMALS));
+            $decimalLen = strlen($decimalPart);
+            $weiFromDecimal = gmp_mul($decimalPart, gmp_pow(10, self::WEI_DECIMALS - $decimalLen));
+            $totalWei = gmp_add($weiFromWhole, $weiFromDecimal);
+            
+            return '0x' . gmp_strval($totalWei, 16);
+        }
+
+        // Last resort: use string manipulation (less precise but handles larger numbers)
+        // This approach works for most practical amounts
+        $weiFloat = $eth * (float) self::WEI_PER_ETH;
+        
+        // For small amounts (< 9.2 ETH), simple conversion works
+        if ($weiFloat < PHP_INT_MAX) {
+            return '0x' . dechex((int) $weiFloat);
+        }
+        
+        // For larger amounts, use sprintf to convert float to decimal string
+        $weiStr = sprintf('%.0f', $weiFloat);
+        return '0x' . $this->decToHex($weiStr);
+    }
+
+    /**
+     * Convert decimal string to hexadecimal string.
+     *
+     * This method handles arbitrarily large decimal numbers by using
+     * division and modulo operations on strings.
+     *
+     * @param string $decimal Decimal number as string
+     * @return string Hexadecimal representation (without 0x prefix)
+     */
+    private function decToHex(string $decimal): string
+    {
+        // Handle zero case
+        if ($decimal === '0' || $decimal === '') {
+            return '0';
+        }
+
+        // Use bcmath if available for arbitrary precision
+        if (function_exists('bcdiv') && function_exists('bcmod')) {
+            $hex = '';
+            while (bccomp($decimal, '0') > 0) {
+                $remainder = bcmod($decimal, '16');
+                $hex = dechex((int) $remainder) . $hex;
+                $decimal = bcdiv($decimal, '16', 0);
+            }
+            return $hex ?: '0';
+        }
+
+        // Fallback for systems without bcmath
+        // This works for numbers that fit in PHP_INT_MAX
+        if (is_numeric($decimal) && (float) $decimal < PHP_INT_MAX) {
+            return dechex((int) $decimal);
+        }
+
+        // For very large numbers without bcmath, return a safe default
+        // This should rarely happen in practice
+        return '0';
+    }
+
+    /**
+     * Estimate gas using fallback heuristics when RPC call fails.
+     *
+     * Provides conservative gas estimates based on transaction type:
+     * - Simple ETH transfer: 21,000 gas
+     * - ERC-20 transfer: 65,000 gas
+     * - Contract interaction: 100,000+ gas (based on data size)
+     *
+     * @param string $from The sender's blockchain address
+     * @param string $to The recipient's blockchain address
+     * @param float $amount The amount to transfer in ETH
+     * @param array<string,mixed> $options Additional transaction options
+     * @return int Conservative gas estimate
+     */
+    private function estimateGasFallback(string $from, string $to, float $amount, array $options = []): int
+    {
+        // Check if this is a contract interaction (has data field)
+        if (isset($options['data']) && !empty($options['data'])) {
+            $data = $options['data'];
+
+            // Check if it's an ERC-20 transfer (starts with 0xa9059cbb which is transfer function selector)
+            if (str_starts_with($data, '0xa9059cbb')) {
+                return self::GAS_ERC20_TRANSFER;
+            }
+
+            // For other contract interactions, estimate based on data size
+            // Remove 0x prefix and calculate bytes
+            $dataHex = str_replace('0x', '', $data);
+            $dataBytes = strlen($dataHex) / 2;
+
+            // Calculate gas cost based on zero and non-zero bytes
+            // For simplicity in fallback, assume worst case (all non-zero bytes)
+            // A more accurate implementation would count actual zero vs non-zero bytes
+            $dataCost = (int) ($dataBytes * self::GAS_PER_NONZERO_BYTE);
+
+            // Base contract call + data cost
+            return self::GAS_CONTRACT_BASE + $dataCost;
+        }
+
+        // Simple ETH transfer
+        return self::GAS_SIMPLE_TRANSFER;
     }
 }
