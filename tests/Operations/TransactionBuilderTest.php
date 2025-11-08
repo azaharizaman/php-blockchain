@@ -369,14 +369,6 @@ class StubEthereumDriver implements BlockchainDriverInterface
     {
         return ['name' => 'ethereum', 'chainId' => 1];
     }
-
-    /**
-     * Get driver name for identification
-     */
-    public function getName(): string
-    {
-        return 'ethereum';
-    }
 }
 
 /**
@@ -427,13 +419,5 @@ class StubSolanaDriver implements BlockchainDriverInterface
     public function getNetworkInfo(): ?array
     {
         return ['name' => 'solana', 'cluster' => 'mainnet-beta'];
-    }
-
-    /**
-     * Get driver name for identification
-     */
-    public function getName(): string
-    {
-        return 'solana';
     }
 }

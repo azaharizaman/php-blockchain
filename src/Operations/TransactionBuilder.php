@@ -457,7 +457,7 @@ class TransactionBuilder
      * Sign transaction payload using wallet
      *
      * Delegates signing to WalletInterface while maintaining SEC-001 compliance.
-     * The payload is serialized and hashed before signing to create a deterministic
+     * The payload is serialized before signing to create a deterministic
      * signature input.
      *
      * **Security Note**: This method never accesses or logs private keys. All
