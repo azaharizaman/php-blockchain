@@ -31,7 +31,7 @@ The driver works with any EVM-compatible network:
 - ✅ **Block Information** - Query block data by number or hash
 - ✅ **Gas Estimation** - Estimate gas costs for transactions with safety buffer
 - ✅ **Network Information** - Get chain ID, gas price, and block number
-- ✅ **ERC-20 Token Support** - Query token balances (via ABI encoding)
+- ⚠️ **ERC-20 Token Support** - ABI encoding utilities only; full token balance query not yet implemented
 - ✅ **Caching Layer** - Built-in caching to reduce RPC calls
 - ✅ **Error Handling** - Comprehensive exception handling
 - 🔄 **Transaction Signing** - Planned for Phase 2
