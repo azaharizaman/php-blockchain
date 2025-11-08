@@ -201,7 +201,7 @@ The `.github/workflows/agent-tasks.yml` file includes:
 - name: Run integration tests (optional)
   if: env.RUN_INTEGRATION_TESTS == 'true'
   run: |
-    vendor/bin/phpunit --testsuite integration || (echo "Integration tests failed" && exit 1)
+    composer run integration-test || (echo "Integration tests failed" && exit 1)
 ```
 
 ### Setting Up Secrets in GitHub
