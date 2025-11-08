@@ -1,0 +1,145 @@
+id: "update-readme"
+name: "Update README and Documentation"
+description: |
+  Automated task for updating README.md and driver documentation sections with latest API surface.
+  Scans the src/Drivers directory, extracts driver information, and synchronizes documentation.
+  Requires operator approval before committing documentation changes.
+
+category: "documentation"
+version: "1.0.0"
+
+scopes:
+  - "filesystem:write"
+  - "filesystem:read"
+
+safety_flags:
+  requires_approval: true
+  allowed_paths:
+    - "README.md"
+    - "docs/"
+    - "docs/drivers/"
+    - "docs/templates/"
+    - "CHANGELOG.md"
+  deny_patterns:
+    - "*.env"
+    - "*.env.*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - ".git/*"
+    - "vendor/*"
+    - "storage/agent-audit.log"
+  max_file_size: 1048576  # 1MB per file
+  timeout: 300  # 5 minutes
+
+inputs:
+  - name: "update_type"
+    type: "string"
+    required: false
+    description: "Type of documentation update: 'drivers', 'api', 'changelog', or 'all'"
+    validation: "^(drivers|api|changelog|all)$"
+    default: "all"
+    example: "drivers"
+
+  - name: "driver_names"
+    type: "array"
+    required: false
+    description: "Specific driver names to update (leave empty to update all drivers)"
+    example: ["Solana", "Ethereum"]
+
+  - name: "template_path"
+    type: "string"
+    required: false
+    description: "Path to custom documentation template (uses default if not provided)"
+    validation: "^(docs/templates/|\\./)"
+    example: "docs/templates/driver-readme.md"
+
+  - name: "changelog_entry"
+    type: "string"
+    required: false
+    description: "Optional changelog entry to add for this update"
+    example: "Added support for new Polygon driver"
+
+  - name: "preview_only"
+    type: "boolean"
+    required: false
+    description: "If true, only show diff preview without writing changes"
+    default: false
+
+outputs:
+  - name: "files_updated"
+    type: "array"
+    description: "List of updated documentation file paths"
+
+  - name: "diff_summary"
+    type: "string"
+    description: "Human-readable summary of changes made"
+
+  - name: "drivers_found"
+    type: "array"
+    description: "List of driver classes discovered in the codebase"
+
+  - name: "preview_diff"
+    type: "string"
+    description: "Unified diff showing proposed changes (when preview_only=true)"
+
+guardrails:
+  - "Only update documentation files, never modify source code"
+  - "Preserve existing content outside of managed sections"
+  - "Use markers like <!-- AUTO-GENERATED --> to identify managed sections"
+  - "Always generate diff preview before writing changes"
+  - "Require operator approval for all documentation changes"
+  - "Maintain consistent markdown formatting"
+  - "Preserve changelog chronological order"
+  - "Do not include sensitive information in documentation"
+
+error_handling:
+  - error_type: "driver_not_found"
+    message: "Specified driver class does not exist"
+    recovery: "Verify driver name and ensure driver is in src/Drivers/ directory"
+
+  - error_type: "template_not_found"
+    message: "Documentation template file not found"
+    recovery: "Use default template or provide valid template path"
+
+  - error_type: "parse_error"
+    message: "Failed to parse driver class for documentation extraction"
+    recovery: "Ensure driver class has valid PHP syntax"
+
+  - error_type: "write_error"
+    message: "Failed to write updated documentation"
+    recovery: "Check file permissions and disk space"
+
+examples:
+  - name: "Update all documentation"
+    inputs:
+      update_type: "all"
+
+  - name: "Update only driver list in README"
+    inputs:
+      update_type: "drivers"
+
+  - name: "Preview changes for specific drivers"
+    inputs:
+      update_type: "drivers"
+      driver_names: ["Bitcoin", "Ethereum"]
+      preview_only: true
+
+  - name: "Update documentation with changelog entry"
+    inputs:
+      update_type: "all"
+      changelog_entry: "Updated API documentation with new method signatures"
+
+post_update_checks:
+  - "Validate markdown syntax in updated files"
+  - "Ensure all links in README are valid"
+  - "Check that driver table is properly formatted"
+  - "Verify changelog maintains reverse chronological order"
+  - "Ensure no TODO markers in published documentation"
+
+documentation:
+  - "Updates README.md's 'Supported Blockchains' table automatically"
+  - "Generates or updates driver-specific documentation in docs/drivers/"
+  - "Maintains changelog entries with timestamps"
+  - "Uses templates from docs/templates/ for consistent formatting"
+  - "Shows diff preview before applying changes for operator review"

@@ -1,0 +1,174 @@
+id: "test-driver"
+name: "Test Blockchain Driver"
+description: |
+  Automated task for running targeted PHPUnit test suites for blockchain drivers.
+  Executes unit tests, integration tests, or both for specified drivers.
+  Provides clear pass/fail status with detailed error reporting.
+
+category: "testing"
+version: "1.0.0"
+
+scopes:
+  - "filesystem:read"
+  - "network:read"  # For integration tests that may hit test networks
+
+safety_flags:
+  requires_approval: false
+  allowed_paths:
+    - "tests/"
+    - "src/"
+    - "vendor/"
+    - ".phpunit.cache/"
+  deny_patterns:
+    - "*.env"
+    - "*.key"
+    - ".git/*"
+  max_file_size: 5242880  # 5MB for test files
+  timeout: 600  # 10 minutes for comprehensive test suites
+
+inputs:
+  - name: "driver_name"
+    type: "string"
+    required: true
+    description: "Name of the driver to test (e.g., 'Solana', 'Ethereum')"
+    validation: "^[A-Z][a-zA-Z0-9]*$"
+    example: "Solana"
+
+  - name: "test_type"
+    type: "string"
+    required: false
+    description: "Type of tests to run: 'unit', 'integration', or 'all'"
+    validation: "^(unit|integration|all)$"
+    default: "all"
+    example: "unit"
+
+  - name: "coverage"
+    type: "boolean"
+    required: false
+    description: "Generate code coverage report"
+    default: false
+
+  - name: "stop_on_failure"
+    type: "boolean"
+    required: false
+    description: "Stop execution on first test failure"
+    default: false
+
+  - name: "filter"
+    type: "string"
+    required: false
+    description: "PHPUnit filter pattern to run specific test methods"
+    example: "testGetBalance"
+
+  - name: "verbose"
+    type: "boolean"
+    required: false
+    description: "Enable verbose test output"
+    default: false
+
+outputs:
+  - name: "test_results"
+    type: "object"
+    description: |
+      Test execution results with structure:
+      {
+        "passed": true/false,
+        "tests_run": 15,
+        "assertions": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2,
+        "time": 1.234
+      }
+
+  - name: "coverage"
+    type: "object"
+    description: |
+      Code coverage metrics (when coverage=true):
+      {
+        "lines_covered": 150,
+        "lines_total": 200,
+        "percentage": 75.0
+      }
+
+  - name: "failure_details"
+    type: "array"
+    description: "Detailed information about failed tests"
+
+  - name: "summary"
+    type: "string"
+    description: "Human-readable test execution summary"
+
+guardrails:
+  - "Only execute tests in tests/ directory"
+  - "Never modify test files during execution"
+  - "Ensure PHPUnit binary exists before running"
+  - "Validate driver test files exist before execution"
+  - "Limit test execution time to prevent infinite loops"
+  - "Isolate test database/network operations"
+  - "Clean up test artifacts after execution"
+
+error_handling:
+  - error_type: "driver_test_not_found"
+    message: "Test file for specified driver does not exist"
+    recovery: "Generate tests using 'generate-tests' task or create manually"
+
+  - error_type: "phpunit_not_found"
+    message: "PHPUnit binary not found in vendor/bin/"
+    recovery: "Run 'composer install' to install dependencies"
+
+  - error_type: "test_timeout"
+    message: "Test execution exceeded timeout limit"
+    recovery: "Increase timeout or check for infinite loops in tests"
+
+  - error_type: "syntax_error"
+    message: "PHP syntax error in test or driver file"
+    recovery: "Fix syntax errors before running tests"
+
+examples:
+  - name: "Run all tests for Solana driver"
+    inputs:
+      driver_name: "Solana"
+      test_type: "all"
+
+  - name: "Run only unit tests with coverage"
+    inputs:
+      driver_name: "Ethereum"
+      test_type: "unit"
+      coverage: true
+
+  - name: "Run specific test method"
+    inputs:
+      driver_name: "Solana"
+      filter: "testGetBalance"
+      verbose: true
+
+  - name: "Quick integration test check"
+    inputs:
+      driver_name: "Polygon"
+      test_type: "integration"
+      stop_on_failure: true
+
+test_execution_flow:
+  - "Validate driver name and test files exist"
+  - "Determine test paths based on test_type"
+  - "Construct PHPUnit command with appropriate flags"
+  - "Execute tests and capture output"
+  - "Parse test results and extract metrics"
+  - "Generate summary report"
+  - "If failures, extract and format error details"
+  - "Return structured results to operator"
+
+post_test_actions:
+  - "Display test summary with pass/fail status"
+  - "Show coverage metrics if requested"
+  - "Highlight any failed assertions with context"
+  - "Suggest next steps based on results"
+  - "Clean up temporary test files"
+
+documentation:
+  - "Executes PHPUnit with configurable test suites"
+  - "Supports filtering tests by method name or pattern"
+  - "Generates code coverage reports when requested"
+  - "Provides detailed failure analysis for debugging"
+  - "Respects PHPUnit configuration in phpunit.xml"
