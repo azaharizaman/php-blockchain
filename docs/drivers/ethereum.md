@@ -255,12 +255,9 @@ $walletAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0';
 // Encode balanceOf call
 $data = Abi::encodeBalanceOf($walletAddress);
 
-// Make contract call
-$result = $ethereum->getTransaction($data); // Simplified - actual implementation varies
-
-// Decode response
-$balance = Abi::decodeResponse('uint256', $result);
-
+// Get token balance (requires driver support for eth_call)
+// NOTE: The EthereumDriver must implement getTokenBalance() for this to work.
+$balance = $ethereum->getTokenBalance($tokenAddress, $walletAddress);
 echo "Token Balance: {$balance}\n";
 ```
 
