@@ -89,7 +89,7 @@ class RateLimiter
      *
      * @param int $tokens Number of tokens to acquire (default: 1)
      * @return void
-     * @throws \InvalidArgumentException If tokens is less than 1
+     * @throws \InvalidArgumentException If tokens is less than 1 or exceeds bucket capacity
      *
      * @example
      * ```php
@@ -102,6 +102,12 @@ class RateLimiter
     {
         if ($tokens < 1) {
             throw new \InvalidArgumentException('tokens must be at least 1');
+        }
+
+        if ($tokens > $this->bucketCapacity) {
+            throw new \InvalidArgumentException(
+                "Cannot acquire $tokens tokens: exceeds bucket capacity of {$this->bucketCapacity}"
+            );
         }
 
         while (!$this->tryAcquire($tokens)) {
@@ -120,7 +126,7 @@ class RateLimiter
      *
      * @param int $tokens Number of tokens to try to acquire (default: 1)
      * @return bool True if tokens were acquired, false otherwise
-     * @throws \InvalidArgumentException If tokens is less than 1
+     * @throws \InvalidArgumentException If tokens is less than 1 or exceeds bucket capacity
      *
      * @example
      * ```php
@@ -136,6 +142,12 @@ class RateLimiter
     {
         if ($tokens < 1) {
             throw new \InvalidArgumentException('tokens must be at least 1');
+        }
+
+        if ($tokens > $this->bucketCapacity) {
+            throw new \InvalidArgumentException(
+                "Cannot acquire $tokens tokens: exceeds bucket capacity of {$this->bucketCapacity}"
+            );
         }
 
         $this->refill();

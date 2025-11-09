@@ -69,7 +69,12 @@ if ($limiter->tryAcquire()) {
 - Fractional rates: Support rates like 0.5 requests/second
 - Burst capacity: Handle temporary traffic spikes
 - Blocking and non-blocking modes
+- Validation: Prevents requesting more tokens than bucket capacity
 - Testable: Override `getCurrentTime()` and `delay()` for deterministic tests
+
+**Important:** You cannot acquire more tokens than the bucket capacity in a single call. 
+If you need to acquire more tokens, either increase the bucket capacity or split into 
+multiple acquire calls.
 
 ### ReliableGuzzleAdapter
 

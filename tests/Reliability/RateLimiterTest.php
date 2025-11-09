@@ -136,6 +136,32 @@ class RateLimiterTest extends TestCase
     }
 
     /**
+     * Test that tryAcquire throws exception when tokens exceed bucket capacity.
+     */
+    public function testTryAcquireThrowsExceptionWhenTokensExceedCapacity(): void
+    {
+        $limiter = new RateLimiter(requestsPerSecond: 10.0, bucketCapacity: 5);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot acquire 10 tokens: exceeds bucket capacity of 5');
+
+        $limiter->tryAcquire(10);
+    }
+
+    /**
+     * Test that acquire throws exception when tokens exceed bucket capacity.
+     */
+    public function testAcquireThrowsExceptionWhenTokensExceedCapacity(): void
+    {
+        $limiter = new TestableRateLimiter(requestsPerSecond: 10.0, bucketCapacity: 5);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot acquire 10 tokens: exceeds bucket capacity of 5');
+
+        $limiter->acquire(10);
+    }
+
+    /**
      * Test that reset refills bucket to capacity.
      */
     public function testResetRefillsBucketToCapacity(): void
