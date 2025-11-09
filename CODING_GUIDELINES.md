@@ -126,6 +126,38 @@ public function testAllProvidersThrowExceptionForMissingSecrets(): void
 }
 ```
 
+### Use expectNotToPerformAssertions() for No-Op Tests
+
+**Issue**: Using `$this->assertTrue(true)` is redundant and unclear about the test's intent.
+
+**Rule**: When testing that a method completes without throwing exceptions (especially for no-op implementations), use `$this->expectNotToPerformAssertions()` at the beginning of the test method to clearly communicate intent.
+
+**Bad Example**:
+```php
+public function testExportDoesNotThrowException(): void
+{
+    $exporter->export(['metric' => 'value']);
+    
+    // If we reach here, the test passes
+    $this->assertTrue(true); // Redundant and unclear
+}
+```
+
+**Good Example**:
+```php
+public function testExportDoesNotThrowException(): void
+{
+    $this->expectNotToPerformAssertions();
+    $exporter->export(['metric' => 'value']);
+}
+```
+
+**Why**: 
+- `$this->assertTrue(true)` always passes and provides no value
+- `expectNotToPerformAssertions()` explicitly documents that the test verifies no exception is thrown
+- It makes the test's purpose clear: ensuring the method can be called safely
+- PHPUnit will properly track this as an intentional design (not a forgotten assertion)
+
 ### Avoid Test Duplication
 
 **Issue**: Duplicating tests across test files reduces maintainability.
@@ -565,6 +597,54 @@ class Bulkhead {
 
 **Why**: PHP typically runs in a request-per-process model where true thread-safety isn't needed. Claiming thread-safety without proper locking mechanisms is misleading. Be honest about the design assumptions.
 
+### 16. Avoid Environment-Dependent Performance Assertions
+
+**Issue**: Performance assertions with tight thresholds can cause flaky test failures on slower CI environments or under system load.
+
+**Rule**: When testing performance characteristics (especially for no-op implementations), use generous thresholds or focus on behavioral tests instead.
+
+**Bad Example**:
+```php
+public function testExportHasNoObservableEffects(): void
+{
+    $startTime = microtime(true);
+    
+    for ($i = 0; $i < 1000; $i++) {
+        $exporter->export(['iteration' => $i]);
+    }
+    
+    $duration = microtime(true) - $startTime;
+    
+    // This may fail on slow CI environments
+    $this->assertLessThan(0.01, $duration, 'Should be very fast');
+}
+```
+
+**Good Example**:
+```php
+public function testExportHasNoObservableEffects(): void
+{
+    $startTime = microtime(true);
+    
+    for ($i = 0; $i < 1000; $i++) {
+        $exporter->export(['iteration' => $i]);
+    }
+    
+    $duration = microtime(true) - $startTime;
+    
+    // Use a generous threshold (1 second for 1000 calls)
+    // This ensures test reliability across different environments
+    $this->assertLessThan(1.0, $duration, 'NoopExporter should have zero overhead');
+}
+```
+
+**Why**: 
+- CI environments and virtualized systems have variable performance
+- Tight performance thresholds (e.g., 10ms) can cause sporadic test failures
+- The goal is to verify no-op behavior, not to measure exact performance
+- Generous thresholds (e.g., 1 second) still catch performance regressions while avoiding flakiness
+- For critical performance tests, consider separate benchmark suites with controlled environments
+
 ## PSR Standards
 
 This project follows:
@@ -606,7 +686,7 @@ Following these guidelines will help maintain a high-quality, consistent, and se
 4. **Document thoroughly** especially security considerations
 5. **Ask for review** when uncertain about design decisions
 
-### 16. Using GuzzleAdapter API Correctly
+### 17. Using GuzzleAdapter API Correctly
 - ❌ Using `$adapter->request()` method which doesn't exist
 - ✅ Use `$adapter->get()` or `$adapter->post()` methods
 
