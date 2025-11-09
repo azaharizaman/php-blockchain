@@ -152,8 +152,8 @@ class NoopExporterTest extends TestCase
      */
     public function testExporterTypeHints(): void
     {
+        $this->expectNotToPerformAssertions();
         $this->expectExporterInterface($this->exporter);
-        $this->assertTrue(true);
     }
 
     /**
