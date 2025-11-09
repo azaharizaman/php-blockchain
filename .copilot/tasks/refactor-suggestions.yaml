@@ -1,0 +1,225 @@
+id: "refactor-suggestions"
+name: "Refactoring Suggestions"
+description: |
+  Intelligent refactoring and optimization agent that analyzes codebase metrics,
+  detects code quality issues, and generates actionable suggestions with git patches.
+  Provides operator review workflow with risk assessment and audit logging.
+
+category: "analysis"
+version: "1.0.0"
+
+scopes:
+  - "filesystem:read"
+  - "filesystem:write"  # For generating patch files
+
+safety_flags:
+  requires_approval: false
+  allowed_paths:
+    - "src/"
+    - "tools/"
+    - "tests/"
+    - "storage/agent-reports/refactor/"
+  deny_patterns:
+    - "*.env"
+    - "*.env.*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - ".git/*"
+    - "vendor/*"
+    - "node_modules/*"
+  max_file_size: 5242880  # 5MB
+  timeout: 600  # 10 minutes
+
+inputs:
+  - name: "analysis_type"
+    type: "string"
+    required: false
+    description: "Type of analysis: 'full', 'complexity', or 'unused'"
+    validation: "^(full|complexity|unused)$"
+    default: "full"
+    example: "full"
+  
+  - name: "complexity_threshold"
+    type: "integer"
+    required: false
+    description: "Cyclomatic complexity threshold (methods above this are flagged)"
+    default: 10
+    validation: "^[0-9]+$"
+    example: "10"
+  
+  - name: "risk_threshold"
+    type: "string"
+    required: false
+    description: "Minimum risk level to report: 'low', 'medium', 'high'"
+    validation: "^(low|medium|high)$"
+    default: "low"
+    example: "medium"
+  
+  - name: "scan_paths"
+    type: "array"
+    required: false
+    description: "Directories to scan (relative to project root)"
+    default: ["src/", "tools/"]
+    example: ["src/", "tools/"]
+  
+  - name: "generate_patches"
+    type: "boolean"
+    required: false
+    description: "Generate git patch files for suggestions"
+    default: true
+  
+  - name: "output_format"
+    type: "string"
+    required: false
+    description: "Report output format: 'markdown', 'json', or 'both'"
+    validation: "^(markdown|json|both)$"
+    default: "both"
+    example: "markdown"
+
+outputs:
+  - name: "suggestions"
+    type: "array"
+    description: "List of refactoring suggestions with risk scores and patches"
+  
+  - name: "summary"
+    type: "object"
+    description: |
+      Summary of analysis results with structure:
+      {
+        "total_suggestions": 10,
+        "by_type": {"complexity": 5, "unused_code": 5},
+        "by_risk": {"high": 2, "medium": 4, "low": 4}
+      }
+  
+  - name: "report_path"
+    type: "string"
+    description: "Path to generated report file"
+  
+  - name: "audit_log_entry"
+    type: "string"
+    description: "Reference to audit log entry for this analysis"
+
+guardrails:
+  - "Never modify source files automatically - only generate suggestions and patches"
+  - "Always provide clear rationale for each suggestion"
+  - "Include risk assessment for every suggestion"
+  - "Respect scan path restrictions and deny patterns"
+  - "Limit analysis depth to prevent performance issues"
+  - "Generate patches in a safe, reviewable format"
+  - "Never expose sensitive data in suggestions or patches"
+  - "Ensure all suggestions are actionable and specific"
+
+error_handling:
+  - error_type: "scan_timeout"
+    message: "Analysis exceeded timeout limit"
+    recovery: "Reduce scan scope or increase timeout"
+  
+  - error_type: "invalid_threshold"
+    message: "Invalid complexity or risk threshold specified"
+    recovery: "Use valid threshold values (complexity >= 1, risk in low/medium/high)"
+  
+  - error_type: "report_write_failed"
+    message: "Failed to write report or patch files"
+    recovery: "Check storage directory permissions and disk space"
+  
+  - error_type: "invalid_scan_path"
+    message: "Specified scan path does not exist or is not accessible"
+    recovery: "Verify scan paths exist and are within allowed directories"
+
+examples:
+  - name: "Full analysis with default settings"
+    inputs:
+      analysis_type: "full"
+      complexity_threshold: 10
+      risk_threshold: "low"
+  
+  - name: "Focus on high-complexity methods only"
+    inputs:
+      analysis_type: "complexity"
+      complexity_threshold: 15
+      risk_threshold: "high"
+      output_format: "markdown"
+  
+  - name: "Detect unused code in specific paths"
+    inputs:
+      analysis_type: "unused"
+      scan_paths: ["src/Drivers/", "tools/agent/"]
+      risk_threshold: "low"
+      generate_patches: true
+
+analysis_components:
+  complexity_analysis:
+    - "Calculate cyclomatic complexity for all methods"
+    - "Flag methods exceeding threshold"
+    - "Identify nested conditionals and loops"
+    - "Suggest method extraction patterns"
+    - "Provide before/after metrics"
+  
+  unused_code_detection:
+    - "Detect unused private methods"
+    - "Identify commented-out code blocks"
+    - "Find unreachable code after return/throw"
+    - "Flag unused local variables (where detectable)"
+    - "Suggest safe removal strategies"
+
+risk_assessment:
+  low:
+    - "Cosmetic improvements"
+    - "Dead code removal in safe contexts"
+    - "Simple refactoring with clear benefits"
+  
+  medium:
+    - "Method extraction from moderately complex code"
+    - "Removing potentially used private methods"
+    - "Refactoring with moderate test coverage impact"
+  
+  high:
+    - "Major method restructuring"
+    - "Changes to public APIs"
+    - "Refactoring in critical paths"
+    - "Removal of code with unclear usage"
+
+patch_format:
+  - "Standard unified diff format"
+  - "Clear file paths and line numbers"
+  - "Contextual information included"
+  - "Human-readable with explanatory comments"
+  - "Safe to review and apply with git apply or manual editing"
+
+report_structure:
+  - "Executive Summary: Suggestion counts by type and risk"
+  - "High Risk Suggestions: Require careful review"
+  - "Medium Risk Suggestions: Review recommended"
+  - "Low Risk Suggestions: Generally safe to apply"
+  - "Patch Files: Individual .diff files per suggestion"
+  - "Application Guide: Instructions for applying suggestions"
+  - "Metadata: Analysis timestamp, settings, duration"
+
+operator_workflow:
+  review:
+    - "Read generated report in storage/agent-reports/refactor/"
+    - "Review each suggestion's rationale and risk"
+    - "Examine patch files for proposed changes"
+    - "Assess impact on tests and dependent code"
+  
+  apply:
+    - "For approved suggestions, apply patches manually or via CLI"
+    - "Run tests after each application"
+    - "Commit changes with reference to suggestion ID"
+    - "Update audit log with applied/skipped decisions"
+
+post_analysis_actions:
+  - "Write report to storage/agent-reports/refactor/"
+  - "Generate individual patch files in patches/ subdirectory"
+  - "Log analysis execution to agent audit log"
+  - "Display summary in operator console"
+  - "Provide clear next steps for operators"
+
+documentation:
+  - "Reports stored in storage/agent-reports/refactor/ directory"
+  - "Each report includes timestamp and analysis configuration"
+  - "Patch files organized by timestamp in patches/ subdirectories"
+  - "Audit log entries reference report files for traceability"
+  - "Operator console displays summary with actionable insights"
+  - "All suggestions include risk scores and detailed rationale"
