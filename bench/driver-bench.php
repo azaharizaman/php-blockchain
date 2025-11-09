@@ -168,17 +168,8 @@ function createDriver(string $driverName, array $config, bool $mockMode, int $it
         throw new \InvalidArgumentException("Unsupported driver: {$driverName}");
     }
     
-    // Map driver names to their classes
-    $driverClasses = [
-        'ethereum' => \Blockchain\Drivers\EthereumDriver::class,
-        'solana' => \Blockchain\Drivers\SolanaDriver::class,
-    ];
-    
-    if (!isset($driverClasses[$driverName])) {
-        throw new \InvalidArgumentException("Driver class not found for: {$driverName}");
-    }
-    
-    $driverClass = $driverClasses[$driverName];
+    // Get driver class from registry to avoid hardcoding
+    $driverClass = $registry->getDriverClass($driverName);
     
     if ($mockMode) {
         $mockAdapter = createMockAdapter($driverName, $iterations);
