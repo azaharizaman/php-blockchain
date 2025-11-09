@@ -164,6 +164,61 @@ tasks:
         type: "integer"
         description: "Number of test methods generated"
 
+  security-audit:
+    id: "security-audit"
+    name: "Security Audit"
+    description: "Comprehensive security audit including static analysis, dependency scanning, and configuration checks"
+    category: "security"
+    scopes:
+      - "filesystem:read"
+      - "network:read"
+    safety_flags:
+      requires_approval: false
+      allowed_paths:
+        - "src/"
+        - "tests/"
+        - "config/"
+        - "composer.json"
+        - "composer.lock"
+        - "storage/agent-reports/security/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+        - "*.pem"
+    inputs:
+      - name: "scan_type"
+        type: "string"
+        required: false
+        description: "Type of scan: 'full', 'static', 'dependencies', or 'config'"
+        validation: "^(full|static|dependencies|config)$"
+      - name: "severity_threshold"
+        type: "string"
+        required: false
+        description: "Minimum severity: 'critical', 'high', 'medium', or 'low'"
+        validation: "^(critical|high|medium|low)$"
+      - name: "fail_on_finding"
+        type: "boolean"
+        required: false
+        description: "Fail task if vulnerabilities are found"
+      - name: "output_format"
+        type: "string"
+        required: false
+        description: "Report format: 'markdown', 'json', or 'both'"
+        validation: "^(markdown|json|both)$"
+    outputs:
+      - name: "findings"
+        type: "array"
+        description: "Security findings with severity and remediation"
+      - name: "summary"
+        type: "object"
+        description: "Summary of findings by severity"
+      - name: "report_path"
+        type: "string"
+        description: "Path to generated report"
+      - name: "recommendations"
+        type: "array"
+        description: "Prioritized remediation recommendations"
+
 metadata:
   version: "1.0.0"
   format_version: "1.0"

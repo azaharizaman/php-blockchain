@@ -1,0 +1,209 @@
+id: "security-audit"
+name: "Security Audit"
+description: |
+  Automated security audit task that performs comprehensive static analysis,
+  dependency review, and configuration checks with actionable remediation guidance.
+  Integrates with PHPStan, Psalm, Composer audit, and custom validators.
+  Redacts sensitive findings before reporting.
+
+category: "security"
+version: "1.0.0"
+
+scopes:
+  - "filesystem:read"
+  - "network:read"  # For composer audit to check vulnerability databases
+
+safety_flags:
+  requires_approval: false
+  allowed_paths:
+    - "src/"
+    - "tests/"
+    - "config/"
+    - "composer.json"
+    - "composer.lock"
+    - "phpstan.neon"
+    - "psalm.xml"
+    - "storage/agent-reports/security/"
+  deny_patterns:
+    - "*.env"
+    - "*.env.*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - ".git/*"
+    - "vendor/*"
+  max_file_size: 5242880  # 5MB
+  timeout: 600  # 10 minutes
+
+inputs:
+  - name: "scan_type"
+    type: "string"
+    required: false
+    description: "Type of security scan: 'full', 'static', 'dependencies', 'config'"
+    validation: "^(full|static|dependencies|config)$"
+    default: "full"
+    example: "full"
+  
+  - name: "severity_threshold"
+    type: "string"
+    required: false
+    description: "Minimum severity level to report: 'critical', 'high', 'medium', 'low'"
+    validation: "^(critical|high|medium|low)$"
+    default: "medium"
+    example: "high"
+  
+  - name: "fail_on_finding"
+    type: "boolean"
+    required: false
+    description: "Whether to fail task execution if vulnerabilities are found"
+    default: false
+  
+  - name: "include_recommendations"
+    type: "boolean"
+    required: false
+    description: "Include remediation recommendations in the report"
+    default: true
+  
+  - name: "output_format"
+    type: "string"
+    required: false
+    description: "Report output format: 'markdown', 'json', 'both'"
+    validation: "^(markdown|json|both)$"
+    default: "both"
+    example: "markdown"
+
+outputs:
+  - name: "findings"
+    type: "array"
+    description: "List of security findings with severity, description, and remediation"
+  
+  - name: "summary"
+    type: "object"
+    description: |
+      Security audit summary with structure:
+      {
+        "total_findings": 5,
+        "critical": 1,
+        "high": 2,
+        "medium": 2,
+        "low": 0,
+        "passed": false
+      }
+  
+  - name: "report_path"
+    type: "string"
+    description: "Path to generated security report file"
+  
+  - name: "recommendations"
+    type: "array"
+    description: "List of prioritized remediation recommendations"
+  
+  - name: "audit_log_entry"
+    type: "string"
+    description: "Reference to audit log entry for this scan"
+
+guardrails:
+  - "Never expose private keys or credentials in reports"
+  - "Redact sensitive values (API keys, tokens, passwords) before reporting"
+  - "Sanitize file paths to prevent information disclosure"
+  - "Limit scan depth to prevent performance issues"
+  - "Validate all external tool outputs before processing"
+  - "Ensure reports are written to approved storage paths only"
+  - "Never execute code from untrusted sources during audit"
+  - "Rate-limit external API calls (composer audit)"
+
+error_handling:
+  - error_type: "tool_not_found"
+    message: "Required security tool not found (PHPStan, Composer, etc.)"
+    recovery: "Install missing tool via composer or skip that analysis type"
+  
+  - error_type: "scan_timeout"
+    message: "Security scan exceeded timeout limit"
+    recovery: "Reduce scan scope or increase timeout"
+  
+  - error_type: "invalid_severity"
+    message: "Invalid severity threshold specified"
+    recovery: "Use one of: critical, high, medium, low"
+  
+  - error_type: "report_write_failed"
+    message: "Failed to write security report to storage"
+    recovery: "Check storage directory permissions and disk space"
+
+examples:
+  - name: "Full security audit with high severity threshold"
+    inputs:
+      scan_type: "full"
+      severity_threshold: "high"
+      fail_on_finding: true
+      include_recommendations: true
+  
+  - name: "Quick dependency check only"
+    inputs:
+      scan_type: "dependencies"
+      severity_threshold: "critical"
+      output_format: "json"
+  
+  - name: "Static analysis focused audit"
+    inputs:
+      scan_type: "static"
+      severity_threshold: "medium"
+      include_recommendations: true
+      output_format: "markdown"
+
+scan_components:
+  static_analysis:
+    - "Run PHPStan analysis at level 7 or higher"
+    - "Run Psalm analysis if available"
+    - "Check for common PHP security vulnerabilities"
+    - "Validate input sanitization patterns"
+    - "Check for SQL injection vulnerabilities"
+    - "Detect potential XSS vectors"
+    - "Identify insecure deserialization"
+  
+  dependency_audit:
+    - "Run composer audit to check for known vulnerabilities"
+    - "Validate dependency versions against security advisories"
+    - "Check for outdated dependencies with security patches"
+    - "Identify unused dependencies that increase attack surface"
+  
+  configuration_checks:
+    - "Verify secure configuration defaults"
+    - "Check for hardcoded credentials or API keys"
+    - "Validate encryption settings"
+    - "Ensure debug mode is not enabled in production configs"
+    - "Check file permission settings"
+    - "Validate environment variable usage"
+
+redaction_rules:
+  - "API keys and tokens: Replace with [REDACTED:API_KEY]"
+  - "Private keys: Replace with [REDACTED:PRIVATE_KEY]"
+  - "Passwords: Replace with [REDACTED:PASSWORD]"
+  - "Secrets: Replace with [REDACTED:SECRET]"
+  - "Internal file paths: Relativize to project root"
+  - "Email addresses: Mask as [REDACTED:EMAIL]"
+  - "IP addresses: Mask as [REDACTED:IP]"
+
+report_structure:
+  - "Executive Summary: High-level findings count and overall status"
+  - "Critical Findings: Immediate action required"
+  - "High Priority Findings: Address within sprint"
+  - "Medium Priority Findings: Schedule for remediation"
+  - "Low Priority Findings: Good-to-have improvements"
+  - "Recommendations: Prioritized action items with references"
+  - "Tool Outputs: Detailed results from each security tool"
+  - "Metadata: Scan timestamp, duration, tools used, versions"
+
+post_audit_actions:
+  - "Write sanitized report to storage/agent-reports/security/"
+  - "Log audit execution to agent audit log with metadata"
+  - "Display critical findings prominently in operator console"
+  - "Generate actionable follow-up tasks if critical issues found"
+  - "Update security metrics in monitoring dashboard"
+
+documentation:
+  - "Reports stored in storage/agent-reports/security/ directory"
+  - "Each report includes timestamp and scan configuration"
+  - "Audit log entries reference report files for traceability"
+  - "Operator console highlights critical findings requiring immediate action"
+  - "Recommendations are prioritized by severity and impact"
+  - "All sensitive data is redacted according to security policies"
