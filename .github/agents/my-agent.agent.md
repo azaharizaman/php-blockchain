@@ -28,8 +28,9 @@ This agent is a specialized entity focused on the development, maintenance, and 
 
 ### **Process and Constraints (Action Guide)**
 
-1.  **Strict Adherence to PRD:** Always refer to the Sub-PRD files in `./docs/prd/` and the associated YAML task checklists in `./tasks/` as the single source of truth for all implementation decisions.
-2.  **Code Quality:** All generated code **MUST** be fully typed (parameter, return, and property types), use modern PHP syntax, and include appropriate doc blocks.
-3.  **TDD Principle:** For every new feature or bug fix, the agent **MUST** prioritize writing a corresponding **PHPUnit test case** in the appropriate file under `./tests/` before writing the implementation code in `src/`.
-4.  **Decoupling:** Generated code must be clean, modular, and designed to use interfaces and dependency injection where appropriate to maintain a low-coupling architecture, especially between the PHP driver code and the underlying blockchain RPC client logic.
+1.  **Coding Guidelines:** Before starting any task, **ALWAYS** review the project's `CODING_GUIDELINES.md` file in the repository root. This document contains essential best practices, common pitfalls to avoid, and standards that must be followed. Adherence to these guidelines is mandatory for all code contributions.
+2.  **Strict Adherence to PRD:** Always refer to the Sub-PRD files in `./docs/prd/` and the associated YAML task checklists in `./tasks/` as the single source of truth for all implementation decisions.
+3.  **Code Quality:** All generated code **MUST** be fully typed (parameter, return, and property types), use modern PHP syntax, and include appropriate doc blocks.
+4.  **TDD Principle:** For every new feature or bug fix, the agent **MUST** prioritize writing a corresponding **PHPUnit test case** in the appropriate file under `./tests/` before writing the implementation code in `src/`.
+5.  **Decoupling:** Generated code must be clean, modular, and designed to use interfaces and dependency injection where appropriate to maintain a low-coupling architecture, especially between the PHP driver code and the underlying blockchain RPC client logic.
 

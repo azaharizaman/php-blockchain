@@ -48,7 +48,7 @@ use Blockchain\Exceptions\SecurityException;
  *
  * @package Blockchain\Security
  */
-class HsmSecretProvider implements SecretProviderInterface
+class HsmSecretProvider implements SigningProviderInterface
 {
     /**
      * HSM/KeyVault configuration.
@@ -100,6 +100,12 @@ class HsmSecretProvider implements SecretProviderInterface
         // TODO: Implement actual HSM/KeyVault integration
         // This is a skeleton implementation that needs to be completed
         // with actual HSM/KeyVault SDK calls
+        //
+        // Example implementation outline:
+        // 1. Authenticate with HSM/KeyVault using $this->config
+        // 2. Retrieve key reference/identifier (not the key itself)
+        // 3. Cache the reference
+        // 4. Return the reference for use with signing operations
 
         throw new SecurityException(
             sprintf(
@@ -108,12 +114,6 @@ class HsmSecretProvider implements SecretProviderInterface
                 $name
             )
         );
-
-        // Example implementation outline:
-        // 1. Authenticate with HSM/KeyVault using $this->config
-        // 2. Retrieve key reference/identifier (not the key itself)
-        // 3. Cache the reference
-        // 4. Return the reference for use with signing operations
     }
 
     /**
@@ -192,6 +192,11 @@ class HsmSecretProvider implements SecretProviderInterface
      * Get the HSM/KeyVault configuration (sanitized).
      *
      * Returns configuration with sensitive values redacted.
+     * 
+     * NOTE: This method is HSM-specific and not part of SecretProviderInterface
+     * because it's primarily used for debugging and logging HSM connection details.
+     * Other providers like EnvSecretProvider don't have configuration objects to
+     * expose, making this method inappropriate for the general interface.
      *
      * @return array<string,mixed> Sanitized configuration
      */

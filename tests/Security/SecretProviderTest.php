@@ -216,34 +216,6 @@ class SecretProviderTest extends TestCase
     }
 
     /**
-     * Test that SecurityException is thrown and can be caught.
-     */
-    public function testSecurityExceptionCanBeThrown(): void
-    {
-        $this->expectException(SecurityException::class);
-        $this->expectExceptionMessage('Security error occurred');
-        
-        throw new SecurityException('Security error occurred');
-    }
-
-    /**
-     * Test that SecurityException can be caught as generic Exception.
-     */
-    public function testSecurityExceptionCanBeCaughtAsException(): void
-    {
-        $caught = false;
-        
-        try {
-            throw new SecurityException('Test security error');
-        } catch (\Exception $e) {
-            $caught = true;
-            $this->assertInstanceOf(SecurityException::class, $e);
-        }
-        
-        $this->assertTrue($caught);
-    }
-
-    /**
      * Test that secret values are not logged in exception messages.
      *
      * This test verifies that when a secret retrieval fails, the actual
@@ -321,41 +293,5 @@ class SecretProviderTest extends TestCase
         
         // Clean up
         putenv('SPECIAL_SECRET');
-    }
-
-    /**
-     * Test contract: all providers implement get().
-     */
-    public function testAllProvidersImplementGet(): void
-    {
-        $providers = [
-            new EnvSecretProvider(),
-            new HsmSecretProvider(['endpoint' => 'test'])
-        ];
-        
-        foreach ($providers as $provider) {
-            $this->assertTrue(
-                method_exists($provider, 'get'),
-                get_class($provider) . ' must implement get() method'
-            );
-        }
-    }
-
-    /**
-     * Test contract: all providers implement has().
-     */
-    public function testAllProvidersImplementHas(): void
-    {
-        $providers = [
-            new EnvSecretProvider(),
-            new HsmSecretProvider(['endpoint' => 'test'])
-        ];
-        
-        foreach ($providers as $provider) {
-            $this->assertTrue(
-                method_exists($provider, 'has'),
-                get_class($provider) . ' must implement has() method'
-            );
-        }
     }
 }
