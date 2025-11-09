@@ -11,7 +11,7 @@
   ],
   "require": {
     "php": ">=8.2",
-    "guzzlehttp/guzzle": "*",
+    "guzzlehttp/guzzle": "^7.8",
     "symfony/console": "^7.0",
     "composer-phar/phpcbf": "^4.0",
     "psr/log": "^3.0"
