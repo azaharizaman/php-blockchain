@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
  * Verifies that the circuit breaker:
  * - Implements state machine correctly (closed, open, half-open)
  * - Tracks failures within a sliding window
- * - Opens circuit when threshold exceeded
+ * - Opens circuit when threshold reached
  * - Transitions to half-open after cooldown
  * - Closes circuit after successful recovery
  * - Supports forced open for maintenance
