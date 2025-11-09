@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockchain;
 
 use Blockchain\Config\ConfigLoader;
+use Blockchain\Config\NetworkProfiles;
 use Blockchain\Registry\DriverRegistry;
 use Blockchain\Exceptions\ConfigurationException;
 use Blockchain\Contracts\BlockchainDriverInterface;
@@ -52,17 +53,29 @@ class BlockchainManager implements BlockchainDriverInterface
     /**
      * Set and configure a blockchain driver.
      *
-     * @param string $name Driver name to set
-     * @param array<string,mixed> $config Driver configuration
+     * Supports two modes:
+     * 1. Direct configuration: Pass driver name and config array
+     * 2. Profile-based: Pass profile name (e.g., 'solana.mainnet') as driver name with empty config
+     *
+     * @param string $driverNameOrProfile Driver name or network profile (e.g., 'solana', 'ethereum.mainnet')
+     * @param array<string,mixed> $config Driver configuration (optional if using profile)
      * @return self For fluent interface
      * @throws UnsupportedDriverException If driver is not registered
      * @throws \Blockchain\Exceptions\ValidationException If configuration is invalid
+     * @throws \InvalidArgumentException If profile is not found
      */
-    /**
-     * @param array<string,mixed> $config
-     */
-    public function setDriver(string $driverName, array $config = []): void
+    public function setDriver(string $driverNameOrProfile, array $config = []): self
     {
+        // Check if this is a profile name (contains a dot)
+        if (empty($config) && NetworkProfiles::has($driverNameOrProfile)) {
+            // Load configuration from profile
+            $profileConfig = NetworkProfiles::get($driverNameOrProfile);
+            $driverName = $profileConfig['driver'];
+            $config = $profileConfig;
+        } else {
+            $driverName = $driverNameOrProfile;
+        }
+
         if (!$this->registry->hasDriver($driverName)) {
             throw new UnsupportedDriverException("Driver '{$driverName}' is not supported.");
         }
@@ -82,6 +95,43 @@ class BlockchainManager implements BlockchainDriverInterface
 
         $this->drivers[$driverName] = $driver;
         $this->currentDriver = $driver;
+        
+        return $this;
+    }
+
+    /**
+     * Set driver using a network profile.
+     *
+     * Convenience method for setting up a driver using a pre-configured network profile.
+     * Profile names follow the pattern 'driver.network' (e.g., 'solana.mainnet', 'ethereum.goerli').
+     *
+     * @param string $profileName Network profile name (e.g., 'ethereum.mainnet', 'solana.devnet')
+     * @return self For fluent interface
+     * @throws \InvalidArgumentException If profile is not found
+     * @throws UnsupportedDriverException If driver is not registered
+     * @throws \Blockchain\Exceptions\ValidationException If configuration is invalid
+     */
+    public function setDriverByProfile(string $profileName): self
+    {
+        $profileConfig = NetworkProfiles::get($profileName);
+        $driverName = $profileConfig['driver'];
+
+        if (!$this->registry->hasDriver($driverName)) {
+            throw new UnsupportedDriverException("Driver '{$driverName}' is not supported.");
+        }
+
+        // Validate configuration
+        ConfigLoader::validateConfig($profileConfig, $driverName);
+
+        // Create driver if not already loaded
+        if (!isset($this->drivers[$driverName])) {
+            $driverClass = $this->registry->getDriver($driverName);
+            $driver = new $driverClass();
+            $driver->connect($profileConfig);
+            $this->drivers[$driverName] = $driver;
+        }
+
+        $this->currentDriver = $this->drivers[$driverName];
         
         return $this;
     }
