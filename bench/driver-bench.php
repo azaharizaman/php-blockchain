@@ -221,6 +221,13 @@ function runGetBalanceWorkload($driver, int $iterations, MetricCollector $collec
         }
     }
     
+    if (count($addresses) === 0) {
+        throw new \InvalidArgumentException(
+            "Address generation for driver type '{$driverClass}' is not implemented. " .
+            "Please update the benchmark to support this driver."
+        );
+    }
+    
     $startTime = microtime(true);
     
     for ($i = 0; $i < $iterations; $i++) {
@@ -330,7 +337,39 @@ function runGetBlockWorkload($driver, int $iterations, MetricCollector $collecto
 }
 
 /**
+ * Calculate a specific percentile using linear interpolation
+ *
+ * @param array<float> $sortedValues Sorted array of values
+ * @param float $percentile Percentile to calculate (0.0 to 1.0)
+ * @return float Interpolated percentile value
+ */
+function calculatePercentile(array $sortedValues, float $percentile): float
+{
+    $count = count($sortedValues);
+    
+    // Calculate the position in the array
+    $position = ($count - 1) * $percentile;
+    $lowerIndex = (int)floor($position);
+    $upperIndex = (int)ceil($position);
+    
+    // If indices are the same, no interpolation needed
+    if ($lowerIndex === $upperIndex) {
+        return $sortedValues[$lowerIndex];
+    }
+    
+    // Linear interpolation between the two nearest values
+    $lowerValue = $sortedValues[$lowerIndex];
+    $upperValue = $sortedValues[$upperIndex];
+    $fraction = $position - $lowerIndex;
+    
+    return $lowerValue + ($upperValue - $lowerValue) * $fraction;
+}
+
+/**
  * Calculate percentiles from latency array
+ *
+ * Uses linear interpolation for accurate percentile calculation,
+ * especially important for smaller datasets.
  *
  * @param array<float> $latencies Array of latency values in milliseconds
  * @return array<string,float> Percentile values
@@ -355,10 +394,10 @@ function calculatePercentiles(array $latencies): array
     return [
         'min' => $latencies[0],
         'max' => $latencies[$count - 1],
-        'p50' => $latencies[(int)($count * 0.50)],
-        'p90' => $latencies[(int)($count * 0.90)],
-        'p95' => $latencies[(int)($count * 0.95)],
-        'p99' => $latencies[(int)($count * 0.99)],
+        'p50' => calculatePercentile($latencies, 0.50),
+        'p90' => calculatePercentile($latencies, 0.90),
+        'p95' => calculatePercentile($latencies, 0.95),
+        'p99' => calculatePercentile($latencies, 0.99),
         'avg' => array_sum($latencies) / $count,
     ];
 }
@@ -506,7 +545,10 @@ function main(): void
     
     // Write output
     if ($args['output_file']) {
-        file_put_contents($args['output_file'], $output);
+        if (file_put_contents($args['output_file'], $output) === false) {
+            fwrite(STDERR, "Error writing to file: " . $args['output_file'] . "\n");
+            exit(1);
+        }
         fwrite(STDERR, "Results written to: " . $args['output_file'] . "\n");
     } else {
         echo $output;

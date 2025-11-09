@@ -241,7 +241,7 @@ class DriverBenchTest extends TestCase
         
         $throughput = $results['metrics']['throughput_ops_per_sec'];
         $this->assertGreaterThan(0, $throughput, 'Throughput should be positive');
-        $this->assertIsFloat($throughput) || $this->assertIsInt($throughput);
+        $this->assertTrue(is_float($throughput) || is_int($throughput), 'Throughput should be float or int');
     }
 
     /**
@@ -388,7 +388,38 @@ class DriverBenchTest extends TestCase
     }
 
     /**
+     * Calculate a specific percentile using linear interpolation
+     *
+     * @param array<float> $sortedValues Sorted array of values
+     * @param float $percentile Percentile to calculate (0.0 to 1.0)
+     * @return float Interpolated percentile value
+     */
+    private function calculatePercentile(array $sortedValues, float $percentile): float
+    {
+        $count = count($sortedValues);
+        
+        // Calculate the position in the array
+        $position = ($count - 1) * $percentile;
+        $lowerIndex = (int)floor($position);
+        $upperIndex = (int)ceil($position);
+        
+        // If indices are the same, no interpolation needed
+        if ($lowerIndex === $upperIndex) {
+            return $sortedValues[$lowerIndex];
+        }
+        
+        // Linear interpolation between the two nearest values
+        $lowerValue = $sortedValues[$lowerIndex];
+        $upperValue = $sortedValues[$upperIndex];
+        $fraction = $position - $lowerIndex;
+        
+        return $lowerValue + ($upperValue - $lowerValue) * $fraction;
+    }
+
+    /**
      * Helper method to calculate percentiles (mirrors the bench script logic)
+     *
+     * Uses linear interpolation for accurate percentile calculation.
      *
      * @param array<float> $latencies Array of latency values
      * @return array<string,float> Percentile values
@@ -413,10 +444,10 @@ class DriverBenchTest extends TestCase
         return [
             'min' => $latencies[0],
             'max' => $latencies[$count - 1],
-            'p50' => $latencies[(int)($count * 0.50)],
-            'p90' => $latencies[(int)($count * 0.90)],
-            'p95' => $latencies[(int)($count * 0.95)],
-            'p99' => $latencies[(int)($count * 0.99)],
+            'p50' => $this->calculatePercentile($latencies, 0.50),
+            'p90' => $this->calculatePercentile($latencies, 0.90),
+            'p95' => $this->calculatePercentile($latencies, 0.95),
+            'p99' => $this->calculatePercentile($latencies, 0.99),
             'avg' => array_sum($latencies) / $count,
         ];
     }
