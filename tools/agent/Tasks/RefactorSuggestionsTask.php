@@ -542,7 +542,9 @@ class RefactorSuggestionsTask
     private function ensureReportDirectory(): void
     {
         if (!is_dir($this->reportDir)) {
-            mkdir($this->reportDir, 0755, true);
+            if (!mkdir($this->reportDir, 0755, true)) {
+                throw new \RuntimeException("Failed to create report directory: {$this->reportDir}");
+            }
         }
     }
 
