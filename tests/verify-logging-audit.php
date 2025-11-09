@@ -18,12 +18,16 @@ echo "=== PHP Blockchain Logging & Audit Verification ===\n\n";
 
 // Test 1: NullLogger
 echo "Test 1: NullLogger instantiation... ";
+$testsPassed = 0;
+$testsFailed = 0;
 try {
     $nullLogger = new NullLogger();
     $nullLogger->info('Test message');
     echo "✓ PASS\n";
+    $testsPassed++;
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 2: RedactingLogger instantiation
@@ -31,8 +35,10 @@ echo "Test 2: RedactingLogger instantiation... ";
 try {
     $logger = new RedactingLogger(new NullLogger());
     echo "✓ PASS\n";
+    $testsPassed++;
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 3: RedactingLogger field management
@@ -43,11 +49,14 @@ try {
     
     if (in_array('private_key', $fields) && in_array('password', $fields)) {
         echo "✓ PASS (Default fields present)\n";
+        $testsPassed++;
     } else {
         echo "✗ FAIL: Default fields missing\n";
+        $testsFailed++;
     }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 4: NullAuditRecorder
@@ -63,11 +72,14 @@ try {
     
     if (empty($events)) {
         echo "✓ PASS (Returns empty as expected)\n";
+        $testsPassed++;
     } else {
         echo "✗ FAIL: Should return empty array\n";
+        $testsFailed++;
     }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 5: FileAuditRecorder - Basic recording
@@ -87,17 +99,25 @@ try {
         
         if ($event['event_type'] === 'key.created' && $event['actor'] === 'user-123') {
             echo "✓ PASS\n";
+            $testsPassed++;
         } else {
             echo "✗ FAIL: Event data mismatch\n";
+            $testsFailed++;
         }
         
         unlink($tempFile);
-        rmdir(dirname($tempFile));
+        // Clean up directory only if it was created by FileAuditRecorder
+        $dir = dirname($tempFile);
+        if ($dir !== sys_get_temp_dir() && is_dir($dir) && count(scandir($dir)) == 2) {
+            rmdir($dir);
+        }
     } else {
         echo "✗ FAIL: File not created\n";
+        $testsFailed++;
     }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 6: FileAuditRecorder - Event retrieval
@@ -116,14 +136,21 @@ try {
     
     if (count($events) === 2) {
         echo "✓ PASS\n";
+        $testsPassed++;
     } else {
         echo "✗ FAIL: Expected 2 events, got " . count($events) . "\n";
+        $testsFailed++;
     }
     
     unlink($tempFile);
-    rmdir(dirname($tempFile));
+    // Clean up directory only if it was created by FileAuditRecorder
+    $dir = dirname($tempFile);
+    if ($dir !== sys_get_temp_dir() && is_dir($dir) && count(scandir($dir)) == 2) {
+        rmdir($dir);
+    }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 7: FileAuditRecorder - Event filtering by type
@@ -144,14 +171,21 @@ try {
     
     if (count($events) === 2 && $events[0]['event_type'] === 'key.created') {
         echo "✓ PASS\n";
+        $testsPassed++;
     } else {
         echo "✗ FAIL: Filtering not working correctly\n";
+        $testsFailed++;
     }
     
     unlink($tempFile);
-    rmdir(dirname($tempFile));
+    // Clean up directory only if it was created by FileAuditRecorder
+    $dir = dirname($tempFile);
+    if ($dir !== sys_get_temp_dir() && is_dir($dir) && count(scandir($dir)) == 2) {
+        rmdir($dir);
+    }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 // Test 8: File path verification
@@ -162,19 +196,28 @@ try {
     
     if ($auditor->getFilePath() === $tempFile) {
         echo "✓ PASS\n";
+        $testsPassed++;
     } else {
         echo "✗ FAIL: File path mismatch\n";
+        $testsFailed++;
     }
     
     if (file_exists($tempFile)) {
         unlink($tempFile);
     }
-    if (is_dir(dirname($tempFile))) {
-        rmdir(dirname($tempFile));
+    // Clean up directory only if it was created by FileAuditRecorder
+    $dir = dirname($tempFile);
+    if ($dir !== sys_get_temp_dir() && is_dir($dir) && count(scandir($dir)) == 2) {
+        rmdir($dir);
     }
 } catch (Exception $e) {
     echo "✗ FAIL: {$e->getMessage()}\n";
+    $testsFailed++;
 }
 
 echo "\n=== Verification Complete ===\n";
-echo "All core functionality verified successfully!\n";
+if ($testsFailed === 0) {
+    echo "All $testsPassed tests passed successfully!\n";
+} else {
+    echo "Results: $testsPassed passed, $testsFailed failed\n";
+}

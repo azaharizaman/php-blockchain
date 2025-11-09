@@ -161,7 +161,7 @@ class RedactingLogger extends AbstractLogger
         $redacted = [];
 
         foreach ($context as $key => $value) {
-            if ($this->shouldRedactField($key)) {
+            if (is_string($key) && $this->shouldRedactField($key)) {
                 $redacted[$key] = $this->redactionMask;
             } elseif ($this->deepRedaction && is_array($value)) {
                 $redacted[$key] = $this->redactContext($value);
@@ -224,7 +224,7 @@ class RedactingLogger extends AbstractLogger
         }
 
         // Escape field names for regex
-        $escapedFields = array_map('preg_quote', $this->redactedFields);
+        $escapedFields = array_map(fn($field) => preg_quote($field, '/'), $this->redactedFields);
         $fieldsPattern = implode('|', $escapedFields);
 
         // Match patterns like:

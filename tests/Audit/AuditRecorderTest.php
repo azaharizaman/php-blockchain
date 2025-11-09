@@ -144,11 +144,8 @@ class AuditRecorderTest extends TestCase
 
         $startTime = new \DateTimeImmutable('2025-01-01 00:00:00');
 
-        // Record events with specific timestamps (simulated)
+        // Record events that will fall within our time range
         $recorder->record('event.1', 'actor-1', ['time' => 'early']);
-        sleep(1); // Ensure different timestamps
-        $midTime = new \DateTimeImmutable();
-        sleep(1);
         $recorder->record('event.2', 'actor-2', ['time' => 'late']);
 
         $endTime = new \DateTimeImmutable('2025-12-31 23:59:59');
@@ -207,19 +204,48 @@ class AuditRecorderTest extends TestCase
     {
         $recorder = new FileAuditRecorder($this->testLogFile);
 
-        // Record several events
-        $recorder->record('event.1', 'actor-1', []);
-        $recorder->record('event.2', 'actor-2', []);
-        $recorder->record('event.3', 'actor-3', []);
-
-        // Wait a bit to ensure timestamps differ
-        sleep(1);
-        $purgeTime = new \DateTimeImmutable();
-        sleep(1);
-
-        // Record more events after purge time
-        $recorder->record('event.4', 'actor-4', []);
-        $recorder->record('event.5', 'actor-5', []);
+        // Create a purge time in the middle of our test window
+        $purgeTime = new \DateTimeImmutable('2025-06-01 00:00:00');
+        
+        // Manually write events with specific timestamps to avoid sleep()
+        // Events before purge time
+        $oldEvent1 = json_encode([
+            'timestamp' => '2025-01-01T10:00:00.000+00:00',
+            'event_type' => 'event.1',
+            'actor' => 'actor-1',
+            'context' => [],
+        ]) . PHP_EOL;
+        
+        $oldEvent2 = json_encode([
+            'timestamp' => '2025-02-01T10:00:00.000+00:00',
+            'event_type' => 'event.2',
+            'actor' => 'actor-2',
+            'context' => [],
+        ]) . PHP_EOL;
+        
+        $oldEvent3 = json_encode([
+            'timestamp' => '2025-03-01T10:00:00.000+00:00',
+            'event_type' => 'event.3',
+            'actor' => 'actor-3',
+            'context' => [],
+        ]) . PHP_EOL;
+        
+        // Events after purge time
+        $newEvent1 = json_encode([
+            'timestamp' => '2025-07-01T10:00:00.000+00:00',
+            'event_type' => 'event.4',
+            'actor' => 'actor-4',
+            'context' => [],
+        ]) . PHP_EOL;
+        
+        $newEvent2 = json_encode([
+            'timestamp' => '2025-08-01T10:00:00.000+00:00',
+            'event_type' => 'event.5',
+            'actor' => 'actor-5',
+            'context' => [],
+        ]) . PHP_EOL;
+        
+        file_put_contents($this->testLogFile, $oldEvent1 . $oldEvent2 . $oldEvent3 . $newEvent1 . $newEvent2);
 
         // Purge events older than purge time
         $purgedCount = $recorder->purgeOldEvents($purgeTime);
@@ -227,8 +253,8 @@ class AuditRecorderTest extends TestCase
         $this->assertSame(3, $purgedCount);
 
         // Verify remaining events
-        $startTime = new \DateTimeImmutable('-1 hour');
-        $endTime = new \DateTimeImmutable('+1 hour');
+        $startTime = new \DateTimeImmutable('2025-01-01 00:00:00');
+        $endTime = new \DateTimeImmutable('2025-12-31 23:59:59');
         $events = $recorder->getEvents($startTime, $endTime);
 
         $this->assertCount(2, $events);
