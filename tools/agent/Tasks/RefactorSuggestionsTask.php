@@ -54,9 +54,9 @@ class RefactorSuggestionsTask
      * @param string|null $projectRoot Optional project root path
      */
     public function __construct(
-        ?TaskRegistry $registry = null,
-        ?OperatorConsole $console = null,
-        ?string $projectRoot = null
+        TaskRegistry $registry = null,
+        OperatorConsole $console = null,
+        string $projectRoot = null
     ) {
         $this->registry = $registry ?? new TaskRegistry();
         $this->projectRoot = $projectRoot ?? dirname(__DIR__, 3);
