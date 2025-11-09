@@ -48,15 +48,12 @@ class NoopExporterTest extends TestCase
      */
     public function testExportDoesNotThrowException(): void
     {
-        // Should complete without any exceptions
+        $this->expectNotToPerformAssertions();
         $this->exporter->export([
             'request_latency_ms' => 245,
             'error_count' => 1,
             'success_count' => 99,
         ]);
-
-        // If we reach here, the test passes
-        $this->assertTrue(true);
     }
 
     /**
@@ -66,8 +63,8 @@ class NoopExporterTest extends TestCase
      */
     public function testExportWithEmptyArray(): void
     {
+        $this->expectNotToPerformAssertions();
         $this->exporter->export([]);
-        $this->assertTrue(true);
     }
 
     /**
@@ -78,6 +75,7 @@ class NoopExporterTest extends TestCase
      */
     public function testExportWithComplexMetrics(): void
     {
+        $this->expectNotToPerformAssertions();
         $this->exporter->export([
             'request_latency_ms' => 245,
             'timestamp' => time(),
@@ -91,8 +89,6 @@ class NoopExporterTest extends TestCase
                 'region' => 'us-east-1',
             ],
         ]);
-
-        $this->assertTrue(true);
     }
 
     /**
@@ -103,6 +99,7 @@ class NoopExporterTest extends TestCase
      */
     public function testExportWithVariousTypes(): void
     {
+        $this->expectNotToPerformAssertions();
         $this->exporter->export([
             'counter' => 42,
             'gauge' => 3.14159,
@@ -110,8 +107,6 @@ class NoopExporterTest extends TestCase
             'flag' => true,
             'tags' => ['tag1', 'tag2', 'tag3'],
         ]);
-
-        $this->assertTrue(true);
     }
 
     /**
