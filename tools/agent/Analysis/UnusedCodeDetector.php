@@ -211,8 +211,10 @@ class UnusedCodeDetector
     {
         // Remove comment markers
         $cleaned = preg_replace('/^(\/\/|\/\*|\*|#)\s*/', '', $comment);
-        $cleaned = trim($cleaned ?? '');
-
+        if ($cleaned === null) {
+            return false; // regex error, treat as not code
+        }
+        $cleaned = trim($cleaned);
         // Check for code patterns (simplified heuristics)
         $codePatterns = [
             '/^\s*(public|private|protected)\s+function/',  // Method declaration
