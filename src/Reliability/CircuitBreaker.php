@@ -8,7 +8,7 @@ namespace Blockchain\Reliability;
  * CircuitBreaker implements the circuit breaker pattern to prevent cascading failures.
  *
  * This class protects downstream services by tracking failures and opening the circuit
- * when a threshold is exceeded. It supports three states:
+ * when a threshold is reached. It supports three states:
  * - Closed: Normal operation, requests pass through
  * - Open: Circuit is open, requests fail fast without calling downstream
  * - Half-Open: Testing if service has recovered
