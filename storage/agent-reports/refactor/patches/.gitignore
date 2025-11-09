@@ -1,0 +1,3 @@
+# Ignore generated patch files
+*
+!.gitignore

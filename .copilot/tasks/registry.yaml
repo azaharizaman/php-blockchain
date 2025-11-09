@@ -219,6 +219,64 @@ tasks:
         type: "array"
         description: "Prioritized remediation recommendations"
 
+  refactor-suggestions:
+    id: "refactor-suggestions"
+    name: "Refactoring Suggestions"
+    description: "Intelligent refactoring and optimization agent that analyzes codebase metrics and generates actionable suggestions"
+    category: "analysis"
+    scopes:
+      - "filesystem:read"
+      - "filesystem:write"
+    safety_flags:
+      requires_approval: false
+      allowed_paths:
+        - "src/"
+        - "tools/"
+        - "tests/"
+        - "storage/agent-reports/refactor/"
+      deny_patterns:
+        - "*.env"
+        - "*.key"
+        - "*.pem"
+    inputs:
+      - name: "analysis_type"
+        type: "string"
+        required: false
+        description: "Type of analysis: 'full', 'complexity', or 'unused'"
+        validation: "^(full|complexity|unused)$"
+      - name: "complexity_threshold"
+        type: "integer"
+        required: false
+        description: "Cyclomatic complexity threshold"
+      - name: "risk_threshold"
+        type: "string"
+        required: false
+        description: "Minimum risk level: 'low', 'medium', or 'high'"
+        validation: "^(low|medium|high)$"
+      - name: "scan_paths"
+        type: "array"
+        required: false
+        description: "Directories to scan"
+      - name: "generate_patches"
+        type: "boolean"
+        required: false
+        description: "Generate git patch files"
+      - name: "output_format"
+        type: "string"
+        required: false
+        description: "Report format: 'markdown', 'json', or 'both'"
+        validation: "^(markdown|json|both)$"
+    outputs:
+      - name: "suggestions"
+        type: "array"
+        description: "Refactoring suggestions with risk scores"
+      - name: "summary"
+        type: "object"
+        description: "Summary of analysis results"
+      - name: "report_path"
+        type: "string"
+        description: "Path to generated report"
+
 metadata:
   version: "1.0.0"
   format_version: "1.0"
