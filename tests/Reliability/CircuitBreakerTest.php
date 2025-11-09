@@ -189,7 +189,7 @@ class CircuitBreakerTest extends TestCase
 
         // Next call should fail fast
         $this->expectException(CircuitBreakerOpenException::class);
-        $this->expectExceptionMessage('Circuit breaker is open');
+        $this->expectExceptionMessage('Circuit breaker is open. Service is unavailable.');
 
         $breaker->call(fn() => 'should not execute');
     }
