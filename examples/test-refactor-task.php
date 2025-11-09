@@ -71,8 +71,16 @@ try {
     
     exit(0);
     
+} catch (\Blockchain\Exceptions\ValidationException $e) {
+    echo "✗ Validation Error: {$e->getMessage()}\n";
+    echo "  Please check your input parameters.\n";
+    exit(1);
+} catch (\RuntimeException $e) {
+    echo "✗ Runtime Error: {$e->getMessage()}\n";
+    echo "  File: {$e->getFile()}:{$e->getLine()}\n";
+    exit(1);
 } catch (\Exception $e) {
-    echo "✗ Error: {$e->getMessage()}\n";
+    echo "✗ Unexpected Error: {$e->getMessage()}\n";
     echo "  File: {$e->getFile()}:{$e->getLine()}\n";
     echo "\nStack trace:\n{$e->getTraceAsString()}\n";
     exit(1);

@@ -67,6 +67,14 @@ class RefactorSuggestionsTaskTest extends TestCase
             $this->recursiveRemoveDirectory($this->testReportDir);
         }
 
+        // Clean up test fixtures
+        if (is_dir($this->fixturesPath)) {
+            $fixtureFile = $this->fixturesPath . '/HighComplexityClass.php';
+            if (file_exists($fixtureFile)) {
+                unlink($fixtureFile);
+            }
+        }
+
         Mockery::close();
         parent::tearDown();
     }

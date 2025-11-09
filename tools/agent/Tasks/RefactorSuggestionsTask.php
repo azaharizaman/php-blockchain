@@ -93,6 +93,14 @@ class RefactorSuggestionsTask
         $generatePatches = $inputs['generate_patches'] ?? true;
         $outputFormat = $inputs['output_format'] ?? 'both';
 
+        // Validate complexity threshold
+        if (!is_int($complexityThreshold) || $complexityThreshold < 1) {
+            throw new ValidationException("Complexity threshold must be a positive integer (>= 1)");
+        }
+
+        // Validate and sanitize scan paths
+        $scanPaths = $this->validateScanPaths($scanPaths);
+
         // Start analysis
         $startTime = microtime(true);
         $this->reportProgress('Starting refactoring analysis...');
@@ -349,7 +357,7 @@ class RefactorSuggestionsTask
 
         $content .= "**By Risk:**\n";
         foreach ($summary['by_risk'] as $risk => $count) {
-            $icon = $risk === 'high' ? '🔴' : ($risk === 'medium' ? '🟡' : '🟢');
+            $icon = $this->getRiskIcon($risk);
             $content .= "- {$icon} " . ucfirst($risk) . ": {$count}\n";
         }
         $content .= "\n";
@@ -365,7 +373,7 @@ class RefactorSuggestionsTask
                 );
                 
                 if (!empty($riskSuggestions)) {
-                    $icon = $risk === 'high' ? '🔴' : ($risk === 'medium' ? '🟡' : '🟢');
+                    $icon = $this->getRiskIcon($risk);
                     $content .= "### {$icon} " . ucfirst($risk) . " Risk\n\n";
                     
                     foreach ($riskSuggestions as $i => $suggestion) {
@@ -441,7 +449,10 @@ class RefactorSuggestionsTask
         if ($json === false) {
             throw new \RuntimeException("Failed to encode report as JSON: " . json_last_error_msg());
         }
-        file_put_contents($path, $json);
+        $bytesWritten = file_put_contents($path, $json);
+        if ($bytesWritten === false) {
+            throw new \RuntimeException("Failed to write JSON report to: {$path}");
+        }
     }
 
     /**
@@ -520,9 +531,13 @@ class RefactorSuggestionsTask
         echo "\n";
 
         echo "  By Risk:\n";
-        echo "    🔴 High: {$summary['by_risk']['high']}\n";
-        echo "    🟡 Medium: {$summary['by_risk']['medium']}\n";
-        echo "    🟢 Low: {$summary['by_risk']['low']}\n\n";
+        foreach (['high', 'medium', 'low'] as $risk) {
+            $icon = $this->getRiskIcon($risk);
+            $count = $summary['by_risk'][$risk] ?? 0;
+            $label = ucfirst($risk);
+            echo "    {$icon} {$label}: {$count}\n";
+        }
+        echo "\n";
 
         // Duration
         echo "⏱️  Duration: {$result['duration']}s\n\n";
@@ -548,6 +563,46 @@ class RefactorSuggestionsTask
                 throw new \RuntimeException("Failed to create report directory: {$this->reportDir}");
             }
         }
+    }
+
+    /**
+     * Validate scan paths for security.
+     *
+     * @param array<string> $paths Paths to validate
+     * @return array<string> Validated paths
+     * @throws ValidationException If path validation fails
+     */
+    private function validateScanPaths(array $paths): array
+    {
+        $validatedPaths = [];
+        
+        foreach ($paths as $path) {
+            $fullPath = $this->projectRoot . '/' . ltrim($path, '/');
+            $realPath = realpath($fullPath);
+            
+            if ($realPath === false || !is_dir($realPath) || !str_starts_with($realPath, $this->projectRoot)) {
+                throw new ValidationException("Invalid scan path: {$path}");
+            }
+            
+            $validatedPaths[] = $path;
+        }
+        
+        return $validatedPaths;
+    }
+
+    /**
+     * Get risk icon for display.
+     *
+     * @param string $risk Risk level
+     * @return string Icon emoji
+     */
+    private function getRiskIcon(string $risk): string
+    {
+        return match($risk) {
+            'high' => '🔴',
+            'medium' => '🟡',
+            default => '🟢',
+        };
     }
 
     /**
