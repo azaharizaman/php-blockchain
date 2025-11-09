@@ -137,7 +137,7 @@ try {
 **Features:**
 - Concurrency limiting: Caps simultaneous operations
 - Resource isolation: Prevents resource exhaustion
-- Queue support: Optional queuing for excess requests
+- Queue support: Reserved for future implementation (currently rejects when at capacity)
 - Statistics: Real-time utilization metrics
 - Manual control: Acquire/release slots explicitly
 - Thread-safe design: Safe for concurrent usage
