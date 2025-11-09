@@ -93,7 +93,334 @@ Metrics tracking distributions:
 
 ## Enabling Telemetry
 
-To enable telemetry, implement a custom exporter for your monitoring backend.
+To enable telemetry, use one of the built-in exporters or implement a custom exporter for your monitoring backend.
+
+### OpenTelemetry Exporter (Built-in)
+
+The `OpenTelemetryExporter` provides native integration with OpenTelemetry collectors and observability platforms.
+
+#### Basic Setup
+
+```php
+<?php
+
+use Blockchain\Telemetry\OpenTelemetryExporter;
+use Blockchain\Telemetry\MetricCollector;
+
+// Create exporter
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+]);
+
+// Use with MetricCollector
+$collector = new MetricCollector($exporter);
+
+$timerId = $collector->startTimer('blockchain.transaction.duration');
+// ... perform blockchain operation ...
+$collector->stopTimer($timerId);
+
+$collector->increment('blockchain.transactions.total');
+$collector->flush();
+```
+
+#### Configuration Options
+
+```php
+$exporter = new OpenTelemetryExporter([
+    // Required: OpenTelemetry collector endpoint
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+    
+    // Optional: Custom HTTP headers (for authentication)
+    'headers' => [
+        'Authorization' => 'Bearer your-token-here',
+        'X-Custom-Header' => 'value',
+    ],
+    
+    // Optional: HTTP timeout in seconds (default: 30)
+    'timeout' => 60,
+    
+    // Optional: Batch size before auto-flush (default: 100)
+    'batch_size' => 50,
+    
+    // Optional: Dry-run mode for testing (default: false)
+    'dry_run' => false,
+    
+    // Optional: Resource attributes attached to all metrics
+    'resource_attributes' => [
+        'service.name' => 'blockchain-api',
+        'service.version' => '1.0.0',
+        'deployment.environment' => 'production',
+        'host.name' => gethostname(),
+    ],
+]);
+```
+
+#### Environment Variable Support
+
+The exporter supports standard OpenTelemetry environment variables:
+
+```bash
+# Override endpoint
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
+
+# Override headers (comma-separated key=value pairs)
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer token123,X-Custom=value"
+```
+
+#### Metric Conversion
+
+The exporter automatically converts SDK metrics to OpenTelemetry format:
+
+| SDK Metric Type | OT Metric Type | Description |
+|----------------|----------------|-------------|
+| Counter (int) | Sum (monotonic) | Cumulative counters like request count |
+| Gauge (float) | Gauge | Point-in-time values like queue depth |
+| Histogram (aggregates) | Histogram | Distribution metrics with count, sum, min, max |
+
+**Example Conversions:**
+
+```php
+// Counter → OT Sum (monotonic)
+$collector->increment('requests.total', 5);
+// Exported as: { "name": "requests.total", "sum": { "isMonotonic": true, "dataPoints": [...] } }
+
+// Gauge → OT Gauge
+$collector->gauge('queue.depth', 42.5);
+// Exported as: { "name": "queue.depth", "gauge": { "dataPoints": [...] } }
+
+// Timer/Histogram → OT Histogram
+$timerId = $collector->startTimer('request.duration');
+// ... operation ...
+$collector->stopTimer($timerId);
+// Exported as: { "name": "request.duration", "histogram": { "dataPoints": [...] } }
+```
+
+#### Dry-Run Mode
+
+Test your metrics without sending data to a collector:
+
+```php
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+    'dry_run' => true,
+]);
+
+// Metrics are validated and converted but not sent
+$exporter->export([
+    'test_metric' => 123,
+]);
+```
+
+Dry-run mode logs what would be sent:
+
+```
+[INFO] Dry-run mode: Would export metrics
+[INFO] metric_count: 1
+[INFO] payload_size: 456
+```
+
+#### Integration with OpenTelemetry Collector
+
+##### Docker Compose Setup
+
+```yaml
+version: '3'
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"  # OTLP HTTP receiver
+      - "8888:8888"  # Prometheus metrics exposed by collector
+      - "13133:13133"  # Health check
+```
+
+##### Collector Configuration
+
+```yaml
+# otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8888"
+  
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus, logging]
+```
+
+##### PHP Application Configuration
+
+```php
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://otel-collector:4318/v1/metrics',
+    'resource_attributes' => [
+        'service.name' => 'php-blockchain',
+        'service.version' => '1.0.0',
+    ],
+]);
+```
+
+#### Integration with Cloud Platforms
+
+##### AWS CloudWatch (via ADOT Collector)
+
+```php
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+    'resource_attributes' => [
+        'service.name' => 'blockchain-api',
+        'aws.region' => 'us-east-1',
+    ],
+]);
+```
+
+##### Google Cloud Monitoring
+
+```php
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+    'resource_attributes' => [
+        'service.name' => 'blockchain-api',
+        'cloud.provider' => 'gcp',
+        'cloud.region' => 'us-central1',
+    ],
+]);
+```
+
+##### Azure Monitor
+
+```php
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+    'resource_attributes' => [
+        'service.name' => 'blockchain-api',
+        'cloud.provider' => 'azure',
+        'azure.region' => 'eastus',
+    ],
+]);
+```
+
+#### Error Handling
+
+The exporter handles errors gracefully:
+
+```php
+use Psr\Log\LoggerInterface;
+
+$logger = new MyLogger();
+
+$exporter = new OpenTelemetryExporter([
+    'endpoint' => 'http://localhost:4318/v1/metrics',
+], $logger);
+
+// Network errors are logged but don't break the application
+$exporter->export($metrics);
+// [ERROR] Failed to export metrics to OpenTelemetry collector
+// [ERROR] error: Connection refused
+```
+
+#### Best Practices
+
+1. **Use Resource Attributes**: Add service identification to all metrics
+   ```php
+   'resource_attributes' => [
+       'service.name' => 'blockchain-api',
+       'service.version' => getenv('APP_VERSION'),
+       'deployment.environment' => getenv('ENVIRONMENT'),
+   ]
+   ```
+
+2. **Configure Appropriate Batch Sizes**: Balance memory usage vs network overhead
+   ```php
+   'batch_size' => 100,  // For high-volume apps
+   ```
+
+3. **Set Reasonable Timeouts**: Prevent blocking on network issues
+   ```php
+   'timeout' => 30,  // 30 seconds
+   ```
+
+4. **Use Dry-Run for Testing**: Validate metrics before production
+   ```php
+   'dry_run' => getenv('ENVIRONMENT') === 'development',
+   ```
+
+5. **Monitor Exporter Health**: Track failed exports
+   ```php
+   $logger->info('Metrics export status', [
+       'success_count' => $successCount,
+       'failure_count' => $failureCount,
+   ]);
+   ```
+
+#### Troubleshooting
+
+**Metrics Not Appearing in Collector**
+
+1. Check endpoint configuration:
+   ```php
+   // Verify endpoint is reachable
+   curl -X POST http://localhost:4318/v1/metrics \
+     -H "Content-Type: application/json" \
+     -d '{"resourceMetrics":[]}'
+   ```
+
+2. Enable debug logging:
+   ```php
+   $logger = new MyDebugLogger();
+   $exporter = new OpenTelemetryExporter($config, $logger);
+   ```
+
+3. Use dry-run mode to verify conversion:
+   ```php
+   $exporter = new OpenTelemetryExporter([
+       'endpoint' => 'http://localhost:4318/v1/metrics',
+       'dry_run' => true,
+   ]);
+   ```
+
+**High Memory Usage**
+
+1. Reduce batch size:
+   ```php
+   'batch_size' => 50,
+   ```
+
+2. Call flush() more frequently:
+   ```php
+   $collector->flush();
+   ```
+
+**Network Timeout Errors**
+
+1. Increase timeout:
+   ```php
+   'timeout' => 60,
+   ```
+
+2. Check collector health:
+   ```bash
+   curl http://localhost:13133/
+   ```
 
 ### Example: Prometheus Exporter
 
@@ -607,8 +934,11 @@ Don't expose stack traces or internal details:
 - [OperationTracerInterface](../src/Telemetry/OperationTracerInterface.php) - Operation-level telemetry hooks
 - [Logging and Audit](LOGGING-AND-AUDIT.md) - Logging and audit trail documentation
 - [Testing Guide](../TESTING.md) - General testing guidelines
+- [OpenTelemetry Documentation](https://opentelemetry.io/docs/) - Official OpenTelemetry documentation
+- [OTLP Specification](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md) - OpenTelemetry Protocol specification
 
 ## Requirements Satisfied
 
 - ✅ **REQ-001**: Export metrics via ExporterInterface (request latencies, error rates, counts)
 - ✅ **CON-001**: Telemetry must be opt-in and not enabled by default (NoopExporter is default)
+- ✅ **TASK-003**: OpenTelemetry exporter with format conversion and dry-run support
