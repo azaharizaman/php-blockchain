@@ -66,27 +66,21 @@ class ResilienceScenariosTest extends TestCase
         $startTime = microtime(true);
 
         // Execute request
-        $response = $adapter->request('POST', 'http://localhost:8545', [
-            'json' => [
-                'jsonrpc' => '2.0',
-                'method' => 'eth_blockNumber',
-                'params' => [],
-                'id' => 1
-            ]
+        $response = $adapter->post('http://localhost:8545', [
+            'jsonrpc' => '2.0',
+            'method' => 'eth_blockNumber',
+            'params' => [],
+            'id' => 1
         ]);
 
         $duration = (microtime(true) - $startTime) * 1000; // Convert to ms
 
-        // Verify request completed successfully
-        $this->assertSame(200, $response['status']);
-
         // Verify latency was injected (should be >= 500ms)
         $this->assertGreaterThanOrEqual(500, $duration, 'Expected at least 500ms latency');
 
-        // Verify response structure
-        $this->assertArrayHasKey('body', $response);
-        $body = json_decode($response['body'], true);
-        $this->assertArrayHasKey('result', $body);
+        // Verify response structure (post() returns decoded JSON directly)
+        $this->assertIsArray($response);
+        $this->assertArrayHasKey('result', $response);
     }
 
     /**
@@ -123,21 +117,16 @@ class ResilienceScenariosTest extends TestCase
 
             try {
                 $result = $retryPolicy->execute(function () use ($adapter) {
-                    $response = $adapter->request('POST', 'http://localhost:8545', [
-                        'json' => [
-                            'jsonrpc' => '2.0',
-                            'method' => 'eth_blockNumber',
-                            'params' => [],
-                            'id' => 1
-                        ]
+                    $response = $adapter->post('http://localhost:8545', [
+                        'jsonrpc' => '2.0',
+                        'method' => 'eth_blockNumber',
+                        'params' => [],
+                        'id' => 1
                     ]);
 
-                    // Check for error in response body
-                    if (isset($response['body'])) {
-                        $body = json_decode($response['body'], true);
-                        if (isset($body['error'])) {
-                            throw new \RuntimeException($body['error']['message']);
-                        }
+                    // Check for error in response (post() returns decoded JSON directly)
+                    if (isset($response['error'])) {
+                        throw new \RuntimeException($response['error']['message']);
                     }
 
                     return $response;
@@ -191,20 +180,15 @@ class ResilienceScenariosTest extends TestCase
         for ($i = 0; $i < 10; $i++) {
             try {
                 $result = $breaker->call(function () use ($adapter) {
-                    $response = $adapter->request('POST', 'http://localhost:8545', [
-                        'json' => [
-                            'jsonrpc' => '2.0',
-                            'method' => 'eth_blockNumber',
-                            'params' => [],
-                            'id' => 1
-                        ]
+                    $response = $adapter->post('http://localhost:8545', [
+                        'jsonrpc' => '2.0',
+                        'method' => 'eth_blockNumber',
+                        'params' => [],
+                        'id' => 1
                     ]);
 
-                    // Check for error in response
-                    if ($response['status'] >= 400) {
-                        throw new \RuntimeException('Request failed');
-                    }
-
+                    // GuzzleAdapter throws exceptions for HTTP errors (400+)
+                    // If we get here, the request succeeded
                     return $response;
                 });
 
@@ -212,7 +196,7 @@ class ResilienceScenariosTest extends TestCase
             } catch (CircuitBreakerOpenException $e) {
                 $circuitOpenCount++;
             } catch (\Exception $e) {
-                // Expected failures before circuit opens
+                // Expected failures before circuit opens (thrown by GuzzleAdapter)
                 continue;
             }
         }
@@ -255,22 +239,21 @@ class ResilienceScenariosTest extends TestCase
         $result = $retryPolicy->execute(function () use ($adapter, &$attempts, &$rateLimitHit) {
             $attempts++;
 
-            $response = $adapter->request('POST', 'http://localhost:8545', [
-                'json' => [
+            try {
+                $response = $adapter->post('http://localhost:8545', [
                     'jsonrpc' => '2.0',
                     'method' => 'eth_blockNumber',
                     'params' => [],
                     'id' => 1
-                ]
-            ]);
+                ]);
 
-            // Check if rate limited
-            if ($response['status'] === 429) {
+                // If we get here, request succeeded
+                return $response;
+            } catch (\Blockchain\Exceptions\ValidationException $e) {
+                // GuzzleAdapter throws ValidationException for 4xx errors (including 429)
                 $rateLimitHit = true;
                 throw new \RuntimeException('Rate limit exceeded');
             }
-
-            return $response;
         });
 
         if ($result !== false) {
@@ -311,26 +294,22 @@ class ResilienceScenariosTest extends TestCase
         // Execute batch of operations
         for ($i = 0; $i < 10; $i++) {
             try {
-                $response = $adapter->request('POST', 'http://localhost:8545', [
-                    'json' => [
-                        'jsonrpc' => '2.0',
-                        'method' => 'eth_getBlockByNumber',
-                        'params' => [sprintf('0x%x', $i), false],
-                        'id' => $i
-                    ]
+                $response = $adapter->post('http://localhost:8545', [
+                    'jsonrpc' => '2.0',
+                    'method' => 'eth_getBlockByNumber',
+                    'params' => [sprintf('0x%x', $i), false],
+                    'id' => $i
                 ]);
 
-                if ($response['status'] === 200) {
-                    $body = json_decode($response['body'], true);
-                    if (!isset($body['error'])) {
-                        $successCount++;
-                    } else {
-                        $failureCount++;
-                    }
+                // GuzzleAdapter returns decoded JSON directly and throws for errors
+                // If we get here, it's a success unless there's an error in the JSON-RPC response
+                if (!isset($response['error'])) {
+                    $successCount++;
                 } else {
                     $failureCount++;
                 }
             } catch (\Exception $e) {
+                // GuzzleAdapter throws exceptions for HTTP errors
                 $failureCount++;
             }
         }
@@ -378,24 +357,15 @@ class ResilienceScenariosTest extends TestCase
             $result = $retryPolicy->execute(function () use ($adapter, &$attempts) {
                 $attempts++;
 
-                $response = $adapter->request('POST', 'http://localhost:8545', [
-                    'json' => [
-                        'jsonrpc' => '2.0',
-                        'method' => 'eth_blockNumber',
-                        'params' => [],
-                        'id' => 1
-                    ]
+                $response = $adapter->post('http://localhost:8545', [
+                    'jsonrpc' => '2.0',
+                    'method' => 'eth_blockNumber',
+                    'params' => [],
+                    'id' => 1
                 ]);
 
-                // Handle rate limits and errors
-                if ($response['status'] === 429) {
-                    throw new \RuntimeException('Rate limit exceeded');
-                }
-
-                if ($response['status'] >= 500) {
-                    throw new \RuntimeException('Server error');
-                }
-
+                // GuzzleAdapter throws exceptions for HTTP errors (rate limits, server errors)
+                // If we get here, the request succeeded
                 return $response;
             });
 
@@ -403,7 +373,7 @@ class ResilienceScenariosTest extends TestCase
                 $recovered = true;
             }
         } catch (\Exception $e) {
-            // Recovery failed
+            // Recovery failed - GuzzleAdapter exceptions will be caught here
         }
 
         $recoveryTime = (microtime(true) - $startTime) * 1000; // Convert to ms

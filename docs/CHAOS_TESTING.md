@@ -182,8 +182,8 @@ public function testRetryUnderChaos(): void
     
     // Execute with retry
     $result = $retryPolicy->execute(function () use ($adapter) {
-        return $adapter->request('POST', 'http://localhost:8545', [
-            'json' => ['method' => 'eth_blockNumber']
+        return $adapter->post('http://localhost:8545', [
+            'method' => 'eth_blockNumber'
         ]);
     });
     

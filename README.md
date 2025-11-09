@@ -666,7 +666,9 @@ $handler = ChaosHarness::createIntermittentErrorScenario(
 );
 
 // Use handler with HTTP client
-$client = new \GuzzleHttp\Client(['handler' => $handler]);
+$handlerStack = \GuzzleHttp\HandlerStack::create($handler);
+$client = new \GuzzleHttp\Client(['handler' => $handlerStack]);
+$adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 ```
 
 #### CI Integration

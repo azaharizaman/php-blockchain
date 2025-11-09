@@ -606,6 +606,65 @@ Following these guidelines will help maintain a high-quality, consistent, and se
 4. **Document thoroughly** especially security considerations
 5. **Ask for review** when uncertain about design decisions
 
+### 16. Using GuzzleAdapter API Correctly
+- ❌ Using `$adapter->request()` method which doesn't exist
+- ✅ Use `$adapter->get()` or `$adapter->post()` methods
+
+**Bad Example**:
+```php
+// request() method doesn't exist in GuzzleAdapter
+$response = $adapter->request('POST', 'http://localhost:8545', [
+    'json' => ['method' => 'eth_blockNumber']
+]);
+
+// Assuming response has 'status' and 'body' keys
+if ($response['status'] === 200) {
+    $body = json_decode($response['body'], true);
+}
+```
+
+**Good Example**:
+```php
+// Use post() method - it returns decoded JSON directly
+$response = $adapter->post('http://localhost:8545', [
+    'method' => 'eth_blockNumber'
+]);
+
+// Response is already decoded JSON array
+if (isset($response['result'])) {
+    // Process result
+}
+```
+
+**Why**: 
+- `GuzzleAdapter` only provides `get()` and `post()` methods, not a generic `request()` method
+- These methods return the decoded JSON response directly as an array, not an object with 'status' and 'body' keys
+- HTTP errors (4xx, 5xx) are thrown as exceptions (`ValidationException` for 4xx, `TransactionException` for 5xx) rather than returned in the response
+- This design provides consistent error handling and simplifies response processing
+
+**Using MockHandler with GuzzleAdapter**:
+```php
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Client;
+use Blockchain\Transport\GuzzleAdapter;
+
+// Create mock handler
+$handler = new MockHandler([
+    new Response(200, [], json_encode(['result' => '0x123']))
+]);
+
+// Wrap in HandlerStack
+$handlerStack = HandlerStack::create($handler);
+
+// Pass to Client, then to GuzzleAdapter
+$client = new Client(['handler' => $handlerStack]);
+$adapter = new GuzzleAdapter($client);
+
+// Use adapter methods
+$response = $adapter->post('http://localhost:8545', ['method' => 'eth_blockNumber']);
+```
+
 ## References
 
 - [PSR-4: Autoloading Standard](https://www.php-fig.org/psr/psr-4/)
