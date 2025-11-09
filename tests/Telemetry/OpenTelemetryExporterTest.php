@@ -115,12 +115,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
-        // Use reflection to test with custom client
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export counter metric
         $exporter->export([
@@ -142,11 +142,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export gauge metric
         $exporter->export([
@@ -167,11 +168,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export histogram metric (timer with aggregates)
         $exporter->export([
@@ -198,11 +200,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export multiple metric types
         $exporter->export([
@@ -231,11 +234,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export with context
         $exporter->export([
@@ -269,11 +273,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 2, // Flush after 2 metrics
-        ]);
+        ], null, $adapter);
 
         // Export 4 metrics (should trigger 2 flushes)
         $exporter->export(['metric1' => 1]);
@@ -307,11 +312,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ], $mockLogger);
+        ], $mockLogger, $adapter);
 
         // Export should not throw, but log error
         $exporter->export(['metric' => 1]);
@@ -335,11 +341,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ], $mockLogger);
+        ], $mockLogger, $adapter);
 
         // Export should not throw, but log error
         $exporter->export(['metric' => 1]);
@@ -401,6 +408,7 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
@@ -408,7 +416,7 @@ class OpenTelemetryExporterTest extends TestCase
                 'Authorization' => 'Bearer secret-token',
             ],
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         $exporter->export(['metric' => 1]);
 
@@ -426,6 +434,7 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
@@ -434,7 +443,7 @@ class OpenTelemetryExporterTest extends TestCase
                 'deployment.environment' => 'production',
             ],
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         $exporter->export(['metric' => 1]);
 
@@ -477,11 +486,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 100, // Large batch size to prevent auto-flush
-        ]);
+        ], null, $adapter);
 
         // Add metric but don't reach batch size
         $exporter->export(['metric' => 1]);
@@ -525,11 +535,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ]);
+        ], null, $adapter);
 
         // Export with structural elements that should be ignored
         $exporter->export([
@@ -577,11 +588,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ], $mockLogger);
+        ], $mockLogger, $adapter);
 
         $exporter->export(['metric' => 1]);
     }
@@ -605,11 +617,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 2,
-        ]);
+        ], null, $adapter);
 
         // First batch
         $exporter->export(['metric1' => 1]);
@@ -639,11 +652,12 @@ class OpenTelemetryExporterTest extends TestCase
 
         $handlerStack = HandlerStack::create($mockHandler);
         $client = new Client(['handler' => $handlerStack]);
+        $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
 
         $exporter = new OpenTelemetryExporter([
             'endpoint' => 'http://localhost:4318/v1/metrics',
             'batch_size' => 1,
-        ], $mockLogger);
+        ], $mockLogger, $adapter);
 
         // Export should clear buffer even on error
         $exporter->export(['metric' => 1]);

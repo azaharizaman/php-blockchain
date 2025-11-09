@@ -158,6 +158,7 @@ class OpenTelemetryExporter implements ExporterInterface
      *
      * @param array<string,mixed> $config Configuration array
      * @param LoggerInterface|null $logger Optional logger for error reporting
+     * @param GuzzleAdapter|null $adapter Optional HTTP adapter for dependency injection (useful for testing)
      *
      * @throws ConfigurationException If endpoint is missing or invalid
      *
@@ -165,13 +166,29 @@ class OpenTelemetryExporter implements ExporterInterface
      * ```php
      * $exporter = new OpenTelemetryExporter([
      *     'endpoint' => 'http://localhost:4318/v1/metrics',
-     *     'headers' => ['Authorization' => 'Bearer token'],
+     *     'headers' => ['Authorization' => '******'],
      *     'batch_size' => 100,
      *     'dry_run' => false,
      * ]);
      * ```
+     *
+     * @example Using custom adapter for testing
+     * ```php
+     * // Create mock handler
+     * $mockHandler = new MockHandler([
+     *     new Response(200, [], json_encode(['status' => 'success']))
+     * ]);
+     * $handlerStack = HandlerStack::create($mockHandler);
+     * $client = new Client(['handler' => $handlerStack]);
+     * $adapter = new GuzzleAdapter($client);
+     *
+     * // Inject mock adapter
+     * $exporter = new OpenTelemetryExporter([
+     *     'endpoint' => 'http://localhost:4318/v1/metrics',
+     * ], null, $adapter);
+     * ```
      */
-    public function __construct(array $config, ?LoggerInterface $logger = null)
+    public function __construct(array $config, ?LoggerInterface $logger = null, ?GuzzleAdapter $adapter = null)
     {
         // Apply environment variable overrides
         $config = $this->applyEnvironmentOverrides($config);
@@ -191,15 +208,19 @@ class OpenTelemetryExporter implements ExporterInterface
         $this->logger = $logger ?? new NullLogger();
 
         // Initialize HTTP client
-        $clientConfig = [
-            'timeout' => $this->config['timeout'],
-            'headers' => array_merge(
-                ['Content-Type' => 'application/json'],
-                $this->config['headers']
-            ),
-        ];
+        if ($adapter === null) {
+            $clientConfig = [
+                'timeout' => $this->config['timeout'],
+                'headers' => array_merge(
+                    ['Content-Type' => 'application/json'],
+                    $this->config['headers']
+                ),
+            ];
 
-        $this->adapter = new GuzzleAdapter(new Client(), $clientConfig);
+            $this->adapter = new GuzzleAdapter(new Client(), $clientConfig);
+        } else {
+            $this->adapter = $adapter;
+        }
     }
 
     /**
