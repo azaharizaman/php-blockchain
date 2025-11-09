@@ -196,7 +196,7 @@ class CircuitBreaker
      * Record a failed operation.
      *
      * Failures are tracked within a sliding time window. If the failure
-     * threshold is exceeded, the circuit opens.
+     * threshold is reached or exceeded, the circuit opens.
      *
      * @return void
      */
