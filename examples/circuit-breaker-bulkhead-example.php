@@ -22,6 +22,7 @@ use Blockchain\Reliability\CircuitBreaker;
 use Blockchain\Reliability\CircuitBreakerOpenException;
 use Blockchain\Reliability\Bulkhead;
 use Blockchain\Reliability\BulkheadFullException;
+use RuntimeException;
 
 echo "=== Circuit Breaker and Bulkhead Examples ===\n\n";
 

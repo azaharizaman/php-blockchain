@@ -440,6 +440,131 @@ if ($testsFailed === 0) {
 
 **Why**: Misleading messages make it difficult to identify test failures. Always accurately report test results.
 
+### 12. Explicit Exception Class References
+- ❌ Using exception classes without leading backslash in global namespace
+- ✅ Use explicit `use` statements or leading backslash for exception classes
+
+**Bad Example**:
+```php
+try {
+    $breaker->call(function () {
+        throw new RuntimeException("Service unavailable");
+    });
+} catch (RuntimeException $e) {
+    // Code...
+}
+```
+
+**Good Example (Option 1 - use statement)**:
+```php
+use RuntimeException;
+
+try {
+    $breaker->call(function () {
+        throw new RuntimeException("Service unavailable");
+    });
+} catch (RuntimeException $e) {
+    // Code...
+}
+```
+
+**Good Example (Option 2 - leading backslash)**:
+```php
+try {
+    $breaker->call(function () {
+        throw new \RuntimeException("Service unavailable");
+    });
+} catch (\RuntimeException $e) {
+    // Code...
+}
+```
+
+**Why**: Explicit namespace usage makes it clear that the class is from the global namespace and prevents ambiguity. It's a PHP best practice to make namespace usage explicit.
+
+### 13. Accurate Terminology in Documentation
+- ❌ Using imprecise language like "exceeded" when the condition is "greater than or equal to"
+- ✅ Use accurate terminology matching the actual implementation
+
+**Bad Example**:
+```php
+/**
+ * Opens circuit when threshold exceeded
+ */
+// Implementation: if ($failures >= $threshold)
+```
+
+**Good Example**:
+```php
+/**
+ * Opens circuit when threshold reached or exceeded
+ */
+// Implementation: if ($failures >= $threshold)
+```
+
+**Why**: Documentation should accurately reflect the implementation. Using "exceeded" when the code uses `>=` is misleading. Better to say "reached" or "reached or exceeded".
+
+### 14. Documentation vs Implementation Alignment
+- ❌ Documenting features as implemented when they're only planned for future
+- ✅ Clearly document what's implemented vs what's planned
+
+**Bad Example**:
+```php
+/**
+ * Execute with bulkhead protection.
+ * If queueing is enabled, it will wait for a slot to become available.
+ */
+public function execute(callable $operation)
+{
+    // Implementation: return false immediately, no queueing
+}
+```
+
+**Good Example**:
+```php
+/**
+ * Execute with bulkhead protection.
+ * 
+ * If queueing is enabled, operations would be queued (not yet implemented).
+ * Currently rejects immediately when at capacity.
+ */
+public function execute(callable $operation)
+{
+    // Implementation: return false immediately
+}
+```
+
+**Why**: Documentation must accurately reflect current behavior. Documenting unimplemented features as if they exist misleads users and can cause bugs.
+
+### 15. Thread-Safety Claims
+- ❌ Claiming thread-safety without proper synchronization mechanisms
+- ✅ Be honest about concurrency limitations in typical PHP environments
+
+**Bad Example**:
+```php
+/**
+ * Features:
+ * - Thread-safe design: Safe for concurrent usage
+ */
+class Bulkhead {
+    private int $activeCount = 0; // No locking mechanism
+}
+```
+
+**Good Example**:
+```php
+/**
+ * Features:
+ * - Concurrency-aware design: Suitable for typical PHP request-per-process model
+ * - For true thread/process safety in multi-threaded environments, additional
+ *   synchronization mechanisms (locks, semaphores) would be required
+ */
+class Bulkhead {
+    private int $activeCount = 0;
+}
+```
+
+**Why**: PHP typically runs in a request-per-process model where true thread-safety isn't needed. Claiming thread-safety without proper locking mechanisms is misleading. Be honest about the design assumptions.
+
 ## PSR Standards
 
 This project follows:

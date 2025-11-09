@@ -147,13 +147,13 @@ class CircuitBreakerTest extends TestCase
     }
 
     /**
-     * Test that circuit opens when failure threshold exceeded.
+     * Test that circuit opens when failure threshold reached.
      */
     public function testCircuitOpensWhenThresholdExceeded(): void
     {
         $breaker = new CircuitBreaker(failureThreshold: 3);
 
-        // Record 3 failures to exceed threshold
+        // Record 3 failures to reach threshold
         for ($i = 0; $i < 3; $i++) {
             try {
                 $breaker->call(function () {
