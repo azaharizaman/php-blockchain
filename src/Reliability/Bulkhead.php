@@ -94,8 +94,8 @@ class Bulkhead
      * Execute a callable with bulkhead protection.
      *
      * If the concurrency limit is reached and queueing is disabled, this will
-     * throw BulkheadFullException. If queueing is enabled, it will wait for
-     * a slot to become available.
+     * throw BulkheadFullException. If queueing is enabled, operations would be queued
+     * (not yet implemented). Currently rejects immediately when at capacity.
      *
      * @template T
      * @param callable(): T $operation The operation to execute
