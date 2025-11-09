@@ -21,7 +21,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Blockchain\Telemetry\OpenTelemetryExporter;
 use Blockchain\Telemetry\MetricCollector;
-use Blockchain\Telemetry\NoopExporter;
 
 echo "====================================\n";
 echo "OpenTelemetry Exporter Example\n";
