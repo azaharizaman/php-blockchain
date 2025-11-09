@@ -745,6 +745,90 @@ $adapter = new GuzzleAdapter($client);
 $response = $adapter->post('http://localhost:8545', ['method' => 'eth_blockNumber']);
 ```
 
+### 18. Dependency Injection for Testability
+- ❌ Hardcoding dependencies without allowing injection
+- ✅ Accept optional dependencies in constructor for testing
+
+**Bad Example**:
+```php
+class OpenTelemetryExporter implements ExporterInterface
+{
+    private GuzzleAdapter $adapter;
+    
+    public function __construct(array $config)
+    {
+        // Hardcoded - impossible to inject mock for testing
+        $this->adapter = new GuzzleAdapter(new Client(), $config);
+    }
+}
+```
+
+**Good Example**:
+```php
+class OpenTelemetryExporter implements ExporterInterface
+{
+    private GuzzleAdapter $adapter;
+    
+    public function __construct(
+        array $config, 
+        ?LoggerInterface $logger = null,
+        ?GuzzleAdapter $adapter = null  // Optional for dependency injection
+    ) {
+        if ($adapter === null) {
+            // Create default if not provided
+            $this->adapter = new GuzzleAdapter(new Client(), $config);
+        } else {
+            // Use injected adapter (useful for testing)
+            $this->adapter = $adapter;
+        }
+    }
+}
+```
+
+**Testing with Injected Mock**:
+```php
+public function testExportWithMockAdapter(): void
+{
+    // Create mock handler
+    $mockHandler = new MockHandler([
+        new Response(200, [], json_encode(['status' => 'success']))
+    ]);
+    
+    $handlerStack = HandlerStack::create($mockHandler);
+    $client = new Client(['handler' => $handlerStack]);
+    $adapter = new \Blockchain\Transport\GuzzleAdapter($client);
+    
+    // Inject mock adapter
+    $exporter = new OpenTelemetryExporter([
+        'endpoint' => 'http://localhost:4318/v1/metrics',
+    ], null, $adapter);
+    
+    // Test with mocked HTTP calls
+    $exporter->export(['metric' => 123]);
+}
+```
+
+**Why**: 
+- Enables dependency injection for testing without reflection
+- Maintains simplicity for production use (dependencies auto-created)
+- Follows SOLID principles (Dependency Inversion Principle)
+- Makes tests faster and more reliable by avoiding real network calls
+- Allows testing error conditions that would be hard to trigger with real services
+
+**When to Use**:
+- For any class that makes external network calls (HTTP, database, etc.)
+- For classes that interact with file systems or other I/O
+- For classes with dependencies that are expensive or slow to create
+- When you want to test error conditions without relying on external systems
+
+**Pattern Summary**:
+1. Add optional parameter(s) for dependencies at the end of constructor
+2. Check if parameter is null
+3. If null, create default dependency
+4. If provided, use injected dependency
+5. Document the injection parameter with `@param` in PHPDoc
+6. Provide example of testing with injection in PHPDoc or tests
+
 ## References
 
 - [PSR-4: Autoloading Standard](https://www.php-fig.org/psr/psr-4/)
