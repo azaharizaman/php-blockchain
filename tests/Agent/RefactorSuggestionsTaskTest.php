@@ -386,7 +386,10 @@ class HighComplexityClass
 PHP;
 
         $fixturePath = $this->fixturesPath . '/HighComplexityClass.php';
-        file_put_contents($fixturePath, $fixtureContent);
+        $result = file_put_contents($fixturePath, $fixtureContent);
+        if ($result === false) {
+            $this->fail("Failed to create test fixture file: {$fixturePath}");
+        }
     }
 
     /**
