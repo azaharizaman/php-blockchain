@@ -186,56 +186,72 @@ class ComplexityScanner
     private function extractMethods(array $tokens, string $content): array
     {
         $methods = [];
+        $contextStack = [];
         $currentMethod = null;
-        $braceLevel = 0;
-        $inMethod = false;
 
         for ($i = 0; $i < count($tokens); $i++) {
             $token = $tokens[$i];
 
             // Detect function/method declaration
             if (is_array($token) && $token[0] === T_FUNCTION) {
-                // Get method name
+                // Determine if this is a named function or a closure
                 $methodName = null;
+                $isClosure = true;
                 for ($j = $i + 1; $j < count($tokens); $j++) {
                     if (is_array($tokens[$j]) && $tokens[$j][0] === T_STRING) {
                         $methodName = $tokens[$j][1];
+                        $isClosure = false;
+                        break;
+                    }
+                    // If we hit a '(' before a T_STRING, it's a closure
+                    if ($tokens[$j] === '(') {
                         break;
                     }
                 }
 
-                if ($methodName !== null) {
-                    $currentMethod = [
-                        'name' => $methodName,
-                        'start_line' => is_array($token) ? $token[2] : 0,
-                        'tokens' => [],
-                        'end_line' => 0,
-                    ];
-                    $braceLevel = 0;
-                    $inMethod = true;
+                // Push new context for function/closure
+                $contextStack[] = [
+                    'name' => $methodName,
+                    'start_line' => is_array($token) ? $token[2] : 0,
+                    'tokens' => [],
+                    'braceLevel' => 0,
+                    'isClosure' => $isClosure,
+                ];
+
+                // If this is a named method, set as currentMethod
+                if ($methodName !== null && !$isClosure) {
+                    $currentMethod = &$contextStack[array_key_last($contextStack)];
                 }
             }
 
-            // Track braces to determine method boundaries
-            if ($inMethod) {
+            // Track braces for all contexts
+            if (!empty($contextStack)) {
                 if ($token === '{') {
-                    $braceLevel++;
+                    $contextStack[array_key_last($contextStack)]['braceLevel']++;
                 } elseif ($token === '}') {
-                    $braceLevel--;
-                    
-                    if ($braceLevel === 0) {
-                        // Method end
-                        if ($currentMethod !== null) {
-                            $currentMethod['end_line'] = $this->getLineNumber($tokens, $i);
-                            $methods[] = $currentMethod;
+                    $contextStack[array_key_last($contextStack)]['braceLevel']--;
+
+                    // If the current context's braces are closed
+                    if ($contextStack[array_key_last($contextStack)]['braceLevel'] === 0) {
+                        $endedContext = array_pop($contextStack);
+
+                        // If this was a named method, finalize it
+                        if ($endedContext['name'] !== null && !$endedContext['isClosure']) {
+                            $endedContext['end_line'] = $this->getLineNumber($tokens, $i);
+                            $methods[] = $endedContext;
                             $currentMethod = null;
-                            $inMethod = false;
                         }
                     }
                 }
 
-                if ($currentMethod !== null) {
-                    $currentMethod['tokens'][] = $token;
+                // Add token to all open contexts
+                foreach ($contextStack as &$ctx) {
+                    $ctx['tokens'][] = $token;
+                }
+                // Also add to the just-ended context if it was closed by this token
+                if (isset($endedContext) && isset($endedContext['tokens'])) {
+                    $endedContext['tokens'][] = $token;
+                    unset($endedContext);
                 }
             }
         }
