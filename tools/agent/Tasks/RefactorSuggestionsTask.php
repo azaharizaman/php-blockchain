@@ -324,6 +324,7 @@ class RefactorSuggestionsTask
      * @param string $path File path
      * @param array<string, mixed> $result Task results
      * @param array<RefactoringSuggestion> $suggestions Suggestions
+     * @throws \RuntimeException If file write fails
      */
     private function writeMarkdownReport(string $path, array $result, array $suggestions): void
     {
