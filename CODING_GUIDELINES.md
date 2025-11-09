@@ -645,6 +645,41 @@ public function testExportHasNoObservableEffects(): void
 - Generous thresholds (e.g., 1 second) still catch performance regressions while avoiding flakiness
 - For critical performance tests, consider separate benchmark suites with controlled environments
 
+### 17. File Write Error Handling
+
+**Issue**: Functions like `file_put_contents()` can fail silently if not checked, leading to data loss or misleading success messages.
+
+**Rule**: Always check the return value of file write operations and handle failures appropriately.
+
+**Bad Example**:
+```php
+// Script reports success even if write fails
+file_put_contents($outputFile, $data);
+echo "Results written to: {$outputFile}\n";
+```
+
+**Good Example**:
+```php
+if (file_put_contents($outputFile, $data) === false) {
+    fwrite(STDERR, "Error writing to file: {$outputFile}\n");
+    exit(1);
+}
+echo "Results written to: {$outputFile}\n";
+```
+
+**Why**:
+- File operations can fail due to permissions, disk space, or I/O errors
+- `file_put_contents()` returns `false` on failure, not an exception
+- Silent failures lead to data loss and confusing bug reports
+- Users expect error messages when operations fail
+- Exit codes signal failure to calling scripts and CI/CD pipelines
+
+**When to Apply**:
+- Any use of `file_put_contents()`, `fwrite()`, `fputs()`
+- Directory creation with `mkdir()`
+- File operations like `copy()`, `rename()`, `unlink()`
+- Any I/O operation that can fail
+
 ## PSR Standards
 
 This project follows:
