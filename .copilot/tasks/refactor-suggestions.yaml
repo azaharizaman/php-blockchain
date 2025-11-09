@@ -45,8 +45,8 @@ inputs:
     required: false
     description: "Cyclomatic complexity threshold (methods above this are flagged)"
     default: 10
-    validation: "^[0-9]+$"
-    example: "10"
+    min: 1
+    example: 10
   
   - name: "risk_threshold"
     type: "string"
