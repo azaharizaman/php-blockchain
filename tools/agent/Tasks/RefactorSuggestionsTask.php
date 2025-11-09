@@ -461,7 +461,10 @@ class RefactorSuggestionsTask
         foreach ($suggestions as $suggestion) {
             if ($suggestion->getPatch() !== null) {
                 $patchFile = "{$patchDir}/patch_{$suggestion->getId()}.diff";
-                file_put_contents($patchFile, $suggestion->getPatch());
+                $bytesWritten = file_put_contents($patchFile, $suggestion->getPatch());
+                if ($bytesWritten === false) {
+                    throw new \RuntimeException("Failed to write patch file: {$patchFile}");
+                }
             }
         }
     }
