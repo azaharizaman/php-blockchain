@@ -600,6 +600,92 @@ composer run integration-test
 
 For detailed testing instructions, see [TESTING.md](TESTING.md).
 
+### Chaos Testing and Resilience Scenarios
+
+The package includes a chaos testing harness to validate system behavior under failure conditions. Chaos tests simulate various real-world failure scenarios to ensure the system's resilience patterns (retry, circuit breaker, rate limiter) handle failures gracefully.
+
+#### Running Chaos Tests Locally
+
+```bash
+# Run all chaos tests with chaos mode enabled
+CHAOS_TESTING=true vendor/bin/phpunit tests/Resilience/ResilienceScenariosTest.php
+
+# Run specific chaos test
+CHAOS_TESTING=true vendor/bin/phpunit --filter testSystemToleratesHighLatency tests/Resilience/ResilienceScenariosTest.php
+
+# Run all resilience tests (without chaos injection)
+vendor/bin/phpunit tests/Resilience/
+```
+
+#### Available Chaos Scenarios
+
+The `ChaosHarness` class in `tests/Resilience/chaos-harness.php` provides several failure injection modes:
+
+1. **Latency Injection**: Simulates slow network conditions
+   - Tests timeout handling and user experience under latency
+   - Configurable delay in milliseconds
+
+2. **Rate Limit Spikes**: Simulates API rate limiting
+   - Tests retry logic with 429 responses
+   - Validates backoff strategies
+
+3. **Intermittent Errors**: Random failures to simulate unreliable networks
+   - Tests retry policies with configurable failure rates
+   - Validates error recovery
+
+4. **Partial Batch Failures**: Some operations succeed, others fail
+   - Tests batch processing error handling
+   - Validates partial success scenarios
+
+5. **Combined Scenarios**: Multiple concurrent failure modes
+   - Tests comprehensive resilience under complex failures
+   - Validates recovery time windows
+
+#### Using Chaos Harness in Tests
+
+```php
+use Blockchain\Tests\Resilience\ChaosHarness;
+
+// Enable chaos testing
+ChaosHarness::enable();
+
+// Create a latency scenario (500ms delay)
+$handler = ChaosHarness::createLatencyScenario(delayMs: 500);
+
+// Create rate limit scenario
+$handler = ChaosHarness::createRateLimitScenario(
+    rateLimitCount: 3,
+    retryAfterSeconds: 1
+);
+
+// Create intermittent error scenario (30% failure rate)
+$handler = ChaosHarness::createIntermittentErrorScenario(
+    failureRate: 30,
+    totalRequests: 10,
+    errorType: 'server'
+);
+
+// Use handler with HTTP client
+$handlerStack = \GuzzleHttp\HandlerStack::create($handler);
+$client = new \GuzzleHttp\Client(['handler' => $handlerStack]);
+$adapter = new \Blockchain\Transport\GuzzleAdapter($client);
+```
+
+#### CI Integration
+
+Chaos tests run automatically in CI on a **non-blocking nightly schedule** to avoid slowing down regular PR checks. The tests validate:
+
+- System recovery from high latency conditions
+- Retry policy handling of intermittent failures
+- Circuit breaker protection during cascading failures
+- Rate limiter handling of rate limit spikes
+- Partial batch failure recovery
+- Combined failure mode recovery within time windows
+
+To run chaos tests in CI manually, trigger the workflow with the `chaos-testing` job.
+
+**For detailed chaos testing documentation, see [docs/CHAOS_TESTING.md](docs/CHAOS_TESTING.md).**
+
 ## 🤖 Agent Integration
 
 This repository is **agent-ready** and supports automatic driver generation via GitHub Copilot. The `.copilot/agent.yml` file defines tasks for:
