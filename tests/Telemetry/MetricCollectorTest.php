@@ -177,7 +177,7 @@ class MetricCollectorTest extends TestCase
         $this->assertEquals(3584.0, $metrics['response.size']['sum']);
         $this->assertEquals(512.0, $metrics['response.size']['min']);
         $this->assertEquals(2048.0, $metrics['response.size']['max']);
-        $this->assertEquals(1194.666666666667, $metrics['response.size']['avg'], '', 0.001);
+        $this->assertEqualsWithDelta(1194.666666666667, $metrics['response.size']['avg'], 0.001);
     }
 
     /**
