@@ -604,7 +604,7 @@ Don't expose stack traces or internal details:
 
 ## Related Documentation
 
-- [OperationTracer](../src/Telemetry/OperationTracerInterface.php) - Operation-level telemetry hooks
+- [OperationTracerInterface](../src/Telemetry/OperationTracerInterface.php) - Operation-level telemetry hooks
 - [Logging and Audit](LOGGING-AND-AUDIT.md) - Logging and audit trail documentation
 - [Testing Guide](../TESTING.md) - General testing guidelines
 
