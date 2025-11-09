@@ -122,12 +122,11 @@ class NoopExporterTest extends TestCase
      */
     public function testMultipleExports(): void
     {
+        $this->expectNotToPerformAssertions();
         $this->exporter->export(['metric1' => 100]);
         $this->exporter->export(['metric2' => 200]);
         $this->exporter->export(['metric3' => 300]);
-
         // All exports should complete successfully
-        $this->assertTrue(true);
     }
 
     /**
