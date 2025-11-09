@@ -2,6 +2,14 @@
 
 This directory contains benchmarking tools for measuring blockchain driver RPC throughput and latency using controlled test scenarios.
 
+## Prerequisites
+
+Before running benchmarks, ensure you have:
+
+1. PHP 8.2 or higher
+2. Composer dependencies installed: `composer install`
+3. For mock mode testing, ensure Guzzle is properly installed
+
 ## Overview
 
 The benchmarking harness provides performance testing capabilities for blockchain drivers with support for:
