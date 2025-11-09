@@ -455,7 +455,9 @@ class RefactorSuggestionsTask
         $patchDir = "{$this->reportDir}/patches/{$timestamp}";
         
         if (!is_dir($patchDir)) {
-            mkdir($patchDir, 0755, true);
+            if (!mkdir($patchDir, 0755, true)) {
+                throw new \RuntimeException("Failed to create patch directory: {$patchDir}");
+            }
         }
 
         foreach ($suggestions as $suggestion) {
