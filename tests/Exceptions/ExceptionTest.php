@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockchain\Tests\Exceptions;
 
 use Blockchain\Exceptions\ConfigurationException;
+use Blockchain\Exceptions\SecurityException;
 use Blockchain\Exceptions\TransactionException;
 use Blockchain\Exceptions\UnsupportedDriverException;
 use Blockchain\Exceptions\ValidationException;
@@ -253,6 +254,7 @@ class ExceptionTest extends TestCase
         $this->assertTrue(class_exists(UnsupportedDriverException::class));
         $this->assertTrue(class_exists(TransactionException::class));
         $this->assertTrue(class_exists(ValidationException::class));
+        $this->assertTrue(class_exists(SecurityException::class));
     }
 
     /**
@@ -270,5 +272,38 @@ class ExceptionTest extends TestCase
         }
 
         $this->assertTrue($caught, 'Exception should be caught as generic Exception');
+    }
+
+    /**
+     * Test that SecurityException can be instantiated and thrown.
+     */
+    public function testSecurityExceptionCanBeInstantiated(): void
+    {
+        $message = 'Security operation failed';
+        $exception = new SecurityException($message);
+
+        $this->assertInstanceOf(SecurityException::class, $exception);
+        $this->assertSame($message, $exception->getMessage());
+    }
+
+    /**
+     * Test that SecurityException extends Exception.
+     */
+    public function testSecurityExceptionExtendsException(): void
+    {
+        $exception = new SecurityException('Test');
+
+        $this->assertInstanceOf(Exception::class, $exception);
+    }
+
+    /**
+     * Test that SecurityException can be caught by its specific type.
+     */
+    public function testSecurityExceptionCanBeCaughtByType(): void
+    {
+        $this->expectException(SecurityException::class);
+        $this->expectExceptionMessage('Secret not found');
+
+        throw new SecurityException('Secret not found');
     }
 }
