@@ -64,6 +64,24 @@ class DriverRegistry
     }
 
     /**
+     * Get a driver class string by name without instantiation.
+     *
+     * @param string $name Driver name
+     * @return class-string<BlockchainDriverInterface> Fully qualified driver class name
+     * @throws UnsupportedDriverException If driver is not registered
+     */
+    public function getDriverClass(string $name): string
+    {
+        $name = strtolower($name);
+
+        if (!$this->hasDriver($name)) {
+            throw new UnsupportedDriverException("Driver '{$name}' is not registered.");
+        }
+
+        return $this->drivers[$name];
+    }
+
+    /**
      * Check if a driver is registered.
      *
      * @param string $name Driver name
@@ -103,8 +121,10 @@ class DriverRegistry
         // Register Solana driver
         $this->registerDriver('solana', \Blockchain\Drivers\SolanaDriver::class);
 
+        // Register Ethereum driver
+        $this->registerDriver('ethereum', \Blockchain\Drivers\EthereumDriver::class);
+
         // Additional drivers can be registered here as they are implemented
-        // $this->registerDriver('ethereum', \Blockchain\Drivers\EthereumDriver::class);
         // $this->registerDriver('polygon', \Blockchain\Drivers\PolygonDriver::class);
     }
 }

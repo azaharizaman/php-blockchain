@@ -1,0 +1,8 @@
+# Benchmark output files
+*.csv
+*.json
+results/
+*.log
+
+# Temporary files
+*.tmp
