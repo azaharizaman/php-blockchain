@@ -682,6 +682,8 @@ Chaos tests run automatically in CI on a **non-blocking nightly schedule** to av
 
 To run chaos tests in CI manually, trigger the workflow with the `chaos-testing` job.
 
+**For detailed chaos testing documentation, see [docs/CHAOS_TESTING.md](docs/CHAOS_TESTING.md).**
+
 ## 🤖 Agent Integration
 
 This repository is **agent-ready** and supports automatic driver generation via GitHub Copilot. The `.copilot/agent.yml` file defines tasks for:
