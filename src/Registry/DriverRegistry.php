@@ -103,8 +103,10 @@ class DriverRegistry
         // Register Solana driver
         $this->registerDriver('solana', \Blockchain\Drivers\SolanaDriver::class);
 
+        // Register Ethereum driver
+        $this->registerDriver('ethereum', \Blockchain\Drivers\EthereumDriver::class);
+
         // Additional drivers can be registered here as they are implemented
-        // $this->registerDriver('ethereum', \Blockchain\Drivers\EthereumDriver::class);
         // $this->registerDriver('polygon', \Blockchain\Drivers\PolygonDriver::class);
     }
 }

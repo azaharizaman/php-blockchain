@@ -24,10 +24,6 @@ use Blockchain\BlockchainManager;
 use Blockchain\Registry\DriverRegistry;
 use Blockchain\Telemetry\MetricCollector;
 use Blockchain\Telemetry\NoopExporter;
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
 use Blockchain\Transport\GuzzleAdapter;
 
 /**
@@ -120,16 +116,21 @@ function createMockAdapter(string $driverName, int $iterations): GuzzleAdapter
 {
     $responses = [];
     
+    // Check if Response class is available
+    if (!class_exists('\GuzzleHttp\Psr7\Response')) {
+        throw new \RuntimeException('GuzzleHttp\Psr7\Response class not found. Please run: composer install');
+    }
+    
     // Generate mock responses based on driver type
     for ($i = 0; $i < $iterations * 5; $i++) { // 5x to handle multiple workload types
         if ($driverName === 'ethereum') {
-            $responses[] = new Response(200, [], json_encode([
+            $responses[] = new \GuzzleHttp\Psr7\Response(200, [], json_encode([
                 'jsonrpc' => '2.0',
                 'id' => 1,
                 'result' => '0x' . dechex(random_int(1000000000000000, 9999999999999999)),
             ]));
         } elseif ($driverName === 'solana') {
-            $responses[] = new Response(200, [], json_encode([
+            $responses[] = new \GuzzleHttp\Psr7\Response(200, [], json_encode([
                 'jsonrpc' => '2.0',
                 'id' => 1,
                 'result' => [
@@ -139,9 +140,13 @@ function createMockAdapter(string $driverName, int $iterations): GuzzleAdapter
         }
     }
     
-    $mockHandler = new MockHandler($responses);
-    $handlerStack = HandlerStack::create($mockHandler);
-    $client = new Client(['handler' => $handlerStack]);
+    if (!class_exists('\GuzzleHttp\Handler\MockHandler')) {
+        throw new \RuntimeException('GuzzleHttp\Handler\MockHandler class not found. Please run: composer install');
+    }
+    
+    $mockHandler = new \GuzzleHttp\Handler\MockHandler($responses);
+    $handlerStack = \GuzzleHttp\HandlerStack::create($mockHandler);
+    $client = new \GuzzleHttp\Client(['handler' => $handlerStack]);
     
     return new GuzzleAdapter($client);
 }
@@ -163,7 +168,17 @@ function createDriver(string $driverName, array $config, bool $mockMode, int $it
         throw new \InvalidArgumentException("Unsupported driver: {$driverName}");
     }
     
-    $driverClass = $registry->getDriver($driverName);
+    // Map driver names to their classes
+    $driverClasses = [
+        'ethereum' => \Blockchain\Drivers\EthereumDriver::class,
+        'solana' => \Blockchain\Drivers\SolanaDriver::class,
+    ];
+    
+    if (!isset($driverClasses[$driverName])) {
+        throw new \InvalidArgumentException("Driver class not found for: {$driverName}");
+    }
+    
+    $driverClass = $driverClasses[$driverName];
     
     if ($mockMode) {
         $mockAdapter = createMockAdapter($driverName, $iterations);
