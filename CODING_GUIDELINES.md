@@ -300,6 +300,146 @@ public function getConfig(): array
 - ❌ Public methods without PHPDoc comments
 - ✅ Complete PHPDoc for all public APIs
 
+### 7. Regex Pattern Escaping
+- ❌ Using `preg_quote()` without specifying the delimiter parameter
+- ✅ Always specify the delimiter when using `preg_quote()` for regex patterns
+
+**Bad Example**:
+```php
+$escapedFields = array_map('preg_quote', $this->fields);
+$pattern = '/(' . implode('|', $escapedFields) . ')/';
+```
+
+**Good Example**:
+```php
+$escapedFields = array_map(fn($field) => preg_quote($field, '/'), $this->fields);
+$pattern = '/(' . implode('|', $escapedFields) . ')/';
+```
+
+**Why**: Without specifying the delimiter, special regex characters in field names won't be properly escaped for use within the regex delimiters, potentially causing regex compilation errors or security issues.
+
+### 8. Type Safety with Array Keys
+- ❌ Assuming array keys are always strings
+- ✅ Check key types before passing to string-typed parameters
+
+**Bad Example**:
+```php
+foreach ($context as $key => $value) {
+    if ($this->shouldRedactField($key)) { // $key might be int
+        // ...
+    }
+}
+
+private function shouldRedactField(string $fieldName): bool { /* ... */ }
+```
+
+**Good Example**:
+```php
+foreach ($context as $key => $value) {
+    if (is_string($key) && $this->shouldRedactField($key)) {
+        // ...
+    }
+}
+
+private function shouldRedactField(string $fieldName): bool { /* ... */ }
+```
+
+**Why**: In PHP, array keys can be integers. When strict types are enabled, passing an integer to a string-typed parameter causes a TypeError.
+
+### 9. Sleep in Unit Tests
+- ❌ Using `sleep()` to create time delays in unit tests
+- ✅ Mock timestamps or write data with predetermined timestamps
+
+**Bad Example**:
+```php
+public function testTimeBasedOperation(): void
+{
+    $recorder->record('event.1', 'actor-1', []);
+    sleep(2); // Slow test!
+    $recorder->record('event.2', 'actor-2', []);
+    
+    // Test time-based retrieval
+}
+```
+
+**Good Example**:
+```php
+public function testTimeBasedOperation(): void
+{
+    // Write events with specific timestamps
+    $event1 = json_encode([
+        'timestamp' => '2025-01-01T10:00:00.000+00:00',
+        'event_type' => 'event.1',
+        'actor' => 'actor-1',
+    ]);
+    
+    $event2 = json_encode([
+        'timestamp' => '2025-02-01T10:00:00.000+00:00',
+        'event_type' => 'event.2',
+        'actor' => 'actor-2',
+    ]);
+    
+    file_put_contents($file, $event1 . PHP_EOL . $event2 . PHP_EOL);
+    
+    // Test time-based retrieval
+}
+```
+
+**Why**: Using `sleep()` makes tests unnecessarily slow and can lead to flaky tests. Setting timestamps programmatically is faster and more reliable.
+
+### 10. Directory Cleanup in Tests
+- ❌ Attempting to remove system directories or non-existent directories
+- ✅ Only remove directories you created and verify they exist and are empty
+
+**Bad Example**:
+```php
+$tempFile = sys_get_temp_dir() . '/test-' . uniqid() . '.log';
+// ... use file ...
+unlink($tempFile);
+rmdir(dirname($tempFile)); // Trying to remove /tmp!
+```
+
+**Good Example**:
+```php
+$tempFile = sys_get_temp_dir() . '/test-' . uniqid() . '.log';
+// ... use file ...
+unlink($tempFile);
+
+// Only remove directory if it's not the system temp and is empty
+$dir = dirname($tempFile);
+if ($dir !== sys_get_temp_dir() && is_dir($dir) && count(scandir($dir)) == 2) {
+    rmdir($dir);
+}
+```
+
+**Why**: Attempting to remove system directories will fail with permission errors. Always verify the directory is one you created before attempting cleanup.
+
+### 11. Misleading Test Result Messages
+- ❌ Printing success messages regardless of test results
+- ✅ Track test results and report accurately
+
+**Bad Example**:
+```php
+// Run tests...
+echo "All tests passed!\n"; // Always prints, even if tests failed
+```
+
+**Good Example**:
+```php
+$testsPassed = 0;
+$testsFailed = 0;
+
+// Run tests, incrementing counters...
+
+if ($testsFailed === 0) {
+    echo "All $testsPassed tests passed successfully!\n";
+} else {
+    echo "Results: $testsPassed passed, $testsFailed failed\n";
+}
+```
+
+**Why**: Misleading messages make it difficult to identify test failures. Always accurately report test results.
+
 ## PSR Standards
 
 This project follows:
