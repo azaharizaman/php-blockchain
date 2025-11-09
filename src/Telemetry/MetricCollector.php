@@ -134,6 +134,9 @@ class MetricCollector
         $metricName = $timer['name'];
         if (!isset($this->buffer[$metricName])) {
             $this->buffer[$metricName] = [];
+        } elseif (!is_array($this->buffer[$metricName])) {
+            // Convert scalar to array if needed
+            $this->buffer[$metricName] = [$this->buffer[$metricName]];
         }
         $this->buffer[$metricName][] = $elapsed;
 
@@ -154,6 +157,9 @@ class MetricCollector
     {
         if (!isset($this->buffer[$metric])) {
             $this->buffer[$metric] = 0;
+        } elseif (is_array($this->buffer[$metric])) {
+            // If it's an array (from timer/histogram), sum it first
+            $this->buffer[$metric] = array_sum($this->buffer[$metric]);
         }
         $this->buffer[$metric] += $value;
     }
