@@ -140,7 +140,7 @@ try {
 - Queue support: Reserved for future implementation (currently rejects when at capacity)
 - Statistics: Real-time utilization metrics
 - Manual control: Acquire/release slots explicitly
-- Thread-safe design: Safe for concurrent usage
+- Concurrency-aware design: Designed for safe usage in typical PHP environments. For true thread/process safety in multi-threaded or multi-process environments, additional synchronization mechanisms are required.
 
 ### ReliableGuzzleAdapter
 
