@@ -65,14 +65,16 @@ class UnusedCodeDetector
 
         foreach ($this->scanPaths as $path) {
             $fullPath = $this->projectRoot . '/' . ltrim($path, '/');
-            
-            if (!is_dir($fullPath)) {
+            $realPath = realpath($fullPath);
+
+            // Validate that the resolved path is a directory and within project root
+            if ($realPath === false || !is_dir($realPath) || !str_starts_with($realPath, $this->projectRoot)) {
                 continue;
             }
 
             $suggestions = array_merge(
                 $suggestions,
-                $this->scanDirectory($fullPath)
+                $this->scanDirectory($realPath)
             );
         }
 
