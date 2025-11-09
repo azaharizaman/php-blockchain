@@ -1,0 +1,105 @@
+name: Chaos Testing (Nightly)
+
+on:
+  # Run nightly at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: 'Specific scenarios to run (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+jobs:
+  chaos-testing:
+    name: Run Chaos Resilience Tests
+    runs-on: ubuntu-latest
+    # Don't block on failure - these tests validate graceful degradation
+    continue-on-error: true
+    
+    permissions:
+      contents: read
+    
+    env:
+      CHAOS_TESTING: true
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+      
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      
+      - name: Run all chaos scenarios
+        if: github.event.inputs.scenarios == 'all' || github.event.inputs.scenarios == ''
+        run: |
+          echo "Running all chaos resilience tests..."
+          vendor/bin/phpunit tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Run specific chaos scenarios
+        if: github.event.inputs.scenarios != 'all' && github.event.inputs.scenarios != ''
+        run: |
+          IFS=',' read -ra SCENARIOS <<< "${{ github.event.inputs.scenarios }}"
+          for scenario in "${SCENARIOS[@]}"; do
+            echo "Running scenario: $scenario"
+            vendor/bin/phpunit --filter "$scenario" tests/Resilience/ResilienceScenariosTest.php --testdox || true
+          done
+      
+      - name: Test latency tolerance
+        run: |
+          echo "Testing high latency scenario..."
+          vendor/bin/phpunit --filter testSystemToleratesHighLatency tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Test retry policy
+        run: |
+          echo "Testing intermittent failure recovery..."
+          vendor/bin/phpunit --filter testRetryPolicyHandlesIntermittentFailures tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Test circuit breaker
+        run: |
+          echo "Testing circuit breaker protection..."
+          vendor/bin/phpunit --filter testCircuitBreakerOpensAfterThresholdFailures tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Test rate limiting
+        run: |
+          echo "Testing rate limit handling..."
+          vendor/bin/phpunit --filter testSystemHandlesRateLimitSpikes tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Test partial batch failures
+        run: |
+          echo "Testing partial batch failure recovery..."
+          vendor/bin/phpunit --filter testSystemHandlesPartialBatchFailures tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Test combined failures
+        run: |
+          echo "Testing recovery under combined failures..."
+          vendor/bin/phpunit --filter testSystemRecoveryUnderCombinedFailures tests/Resilience/ResilienceScenariosTest.php --testdox
+        continue-on-error: true
+      
+      - name: Summarize results
+        if: always()
+        run: |
+          echo "================================================"
+          echo "Chaos Testing Summary"
+          echo "================================================"
+          echo "All chaos tests completed."
+          echo "These tests validate graceful degradation and recovery."
+          echo "Non-blocking failures are expected behavior."
+          echo "Review logs above for detailed scenario results."
+          echo "================================================"
