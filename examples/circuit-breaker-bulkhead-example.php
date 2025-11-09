@@ -45,7 +45,6 @@ echo "   - Cooldown: {$breaker->getCooldownSeconds()}s\n\n";
 echo "2. Circuit Breaker in Action\n";
 echo "   Simulating service that fails 3 times then succeeds...\n";
 
-$attemptCount = 0;
 $testBreaker = new CircuitBreaker(failureThreshold: 3);
 
 for ($i = 1; $i <= 5; $i++) {
