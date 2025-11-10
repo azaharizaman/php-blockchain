@@ -343,27 +343,29 @@ class SwitchNetworkTest extends TestCase
      */
     public function testAllOutputFormatsAreValid(): void
     {
-        $formats = [
-            'json' => function ($output) {
-                $decoded = json_decode($output, true);
-                $this->assertIsArray($decoded);
-                $this->assertArrayHasKey('driver', $decoded);
-            },
-            'php' => function ($output) {
-                $this->assertStringContainsString('<?php', $output);
-                $this->assertStringContainsString('return array', $output);
-            },
-            'env' => function ($output) {
-                $this->assertStringContainsString('DRIVER=', $output);
-                $this->assertStringContainsString('ENDPOINT=', $output);
-            },
-        ];
+        $formats = ['json', 'php', 'env'];
 
-        foreach ($formats as $format => $validator) {
+        foreach ($formats as $format) {
             $result = $this->executeScript("ethereum.localhost --format={$format}");
             
             $this->assertEquals(0, $result['exitCode'], "Format '{$format}' should succeed");
-            $validator($result['output']);
+            
+            // Validate format-specific output
+            switch ($format) {
+                case 'json':
+                    $decoded = json_decode($result['output'], true);
+                    $this->assertIsArray($decoded);
+                    $this->assertArrayHasKey('driver', $decoded);
+                    break;
+                case 'php':
+                    $this->assertStringContainsString('<?php', $result['output']);
+                    $this->assertStringContainsString('return array', $result['output']);
+                    break;
+                case 'env':
+                    $this->assertStringContainsString('DRIVER=', $result['output']);
+                    $this->assertStringContainsString('ENDPOINT=', $result['output']);
+                    break;
+            }
         }
     }
 
