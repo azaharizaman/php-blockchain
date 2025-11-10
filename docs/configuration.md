@@ -226,7 +226,7 @@ $manager->setDriverByProfile('ethereum.mainnet');
 - **Chain ID**: 0x5 (5)
 - **Requirements**: INFURA_API_KEY environment variable
 - **Use Case**: Testing with Goerli testnet
-- **Note**: Goerli is being phased out, consider using Sepolia
+- **Note**: Goerli is being phased out, consider using Sepolia.
 
 ```php
 putenv('INFURA_API_KEY=your_api_key_here');

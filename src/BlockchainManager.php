@@ -116,24 +116,7 @@ class BlockchainManager implements BlockchainDriverInterface
         $profileConfig = NetworkProfiles::get($profileName);
         $driverName = $profileConfig['driver'];
 
-        if (!$this->registry->hasDriver($driverName)) {
-            throw new UnsupportedDriverException("Driver '{$driverName}' is not supported.");
-        }
-
-        // Validate configuration
-        ConfigLoader::validateConfig($profileConfig, $driverName);
-
-        // Create driver if not already loaded
-        if (!isset($this->drivers[$driverName])) {
-            $driverClass = $this->registry->getDriver($driverName);
-            $driver = new $driverClass();
-            $driver->connect($profileConfig);
-            $this->drivers[$driverName] = $driver;
-        }
-
-        $this->currentDriver = $this->drivers[$driverName];
-        
-        return $this;
+        return $this->setDriver($driverName, $profileConfig);
     }
 
     /**
