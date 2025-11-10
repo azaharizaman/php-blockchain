@@ -57,6 +57,70 @@ Follow the agent task spec in `.copilot/agent.yml` or:
 4. Register the driver in `src/Registry/DriverRegistry.php`.
 5. Add a short doc in `docs/drivers/{name}.md` and update `README.md`.
 
+## Documentation Generation
+
+The repository includes automated documentation generation and checking tools for driver documentation.
+
+### Generating Driver Documentation
+
+To generate documentation stubs for new drivers:
+
+```bash
+composer run generate-docs
+```
+
+This script:
+- Scans `src/Drivers/` for driver classes
+- Generates documentation in `docs/drivers/{driver}.md` using the template
+- Skips existing documentation files (won't overwrite your work)
+- Extracts methods from `BlockchainDriverInterface`
+
+### Checking Driver Documentation
+
+To verify all drivers have complete documentation:
+
+```bash
+composer run check-docs
+```
+
+This script:
+- Verifies each driver has corresponding documentation
+- Checks for required sections (Overview, Installation)
+- Reports missing or incomplete documentation
+- Exits with error code if checks fail (useful for CI)
+
+### Documentation Templates
+
+Driver documentation templates are located at:
+- `docs/templates/driver-template.md` - Template for new drivers
+- `docs/templates/driver-readme.md` - Alternative template
+
+### Updating Templates
+
+When you need to update the documentation template:
+
+1. Edit `docs/templates/driver-template.md`
+2. Add or modify template placeholders (e.g., `{{driver_name}}`, `{{blockchain_name}}`)
+3. Update the `generateFromTemplate()` function in `scripts/generate-driver-docs.php` if adding new placeholders
+4. Manually update existing driver docs to match the new structure (generator won't overwrite existing files)
+
+### When to Run Generator vs Checker
+
+- **Run generator**: When adding a new driver and you want a quick documentation stub
+- **Run checker**: Before committing, in CI, or when reviewing PRs to ensure all drivers are documented
+- **Manual editing**: After running the generator, always edit the generated file to add driver-specific details like:
+  - Actual RPC endpoints
+  - Network-specific configuration
+  - Real usage examples
+  - Links to official documentation
+
+### Required Documentation Sections
+
+All driver documentation must include:
+- **Overview**: What the driver does, key features
+- **Installation**: How to install the package
+- Additional recommended sections: Usage, Configuration, Examples, Testing
+
 ## Security and secrets
 
 - Never commit private keys, wallets, or `.env` files.
