@@ -15,6 +15,12 @@ Key methods:
 - `getBlock(int|string $blockNumber)`: fetch block information
 - `getTokenBalance(string $address, string $tokenAddress)`: returns SPL token balance
 
+## Installation
+
+```bash
+composer require azaharizaman/php-blockchain
+```
+
 ## Usage example
 
 ```php
