@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<ruleset name="PHP Blockchain Coding Standards">
+    <description>PSR-12 coding standard for php-blockchain project</description>
+
+    <!-- Use PSR-12 as the base standard -->
+    <rule ref="PSR12"/>
+
+    <!-- Paths to check -->
+    <file>src</file>
+    <file>tests</file>
+
+    <!-- Paths to exclude -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/storage/*</exclude-pattern>
+    <exclude-pattern>*/cache/*</exclude-pattern>
+    <exclude-pattern>*/tools/agent/*</exclude-pattern>
+
+    <!-- Show progress and use colors -->
+    <arg name="colors"/>
+    <arg value="p"/>
+
+    <!-- Check up to 8 files simultaneously -->
+    <arg name="parallel" value="8"/>
+
+    <!-- Only check PHP files -->
+    <arg name="extensions" value="php"/>
+
+    <!-- Show sniff codes in all reports -->
+    <arg value="ns"/>
+</ruleset>
