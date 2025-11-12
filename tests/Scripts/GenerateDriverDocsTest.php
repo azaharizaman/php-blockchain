@@ -198,7 +198,11 @@ PHP;
             return;
         }
 
-        $files = array_diff(scandir($dir), ['.', '..']);
+        $files = scandir($dir);
+        if ($files === false) {
+            return;
+        }
+        $files = array_diff($files, ['.', '..']);
         foreach ($files as $file) {
             $path = $dir . '/' . $file;
             is_dir($path) ? $this->removeDirectory($path) : unlink($path);
