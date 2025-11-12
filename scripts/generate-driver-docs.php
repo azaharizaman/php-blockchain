@@ -48,7 +48,7 @@ if (file_exists($interfacePath)) {
     $interfaceContent = file_get_contents($interfacePath);
     if ($interfaceContent !== false) {
         // Extract method signatures
-        if (preg_match_all('/public function (\w+)\((.*?)\):\s*(\S+);/s', $interfaceContent, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/public function (\w+)\(([^;]*)\):\s*([^\s;]+);/s', $interfaceContent, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 $interfaceMethods[$match[1]] = [
                     'name' => $match[1],
