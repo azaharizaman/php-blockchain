@@ -74,7 +74,7 @@ foreach ($files as $file) {
     $missingSections = [];
     foreach ($requiredSections as $section) {
         // Look for markdown headers with the section name
-        if (!preg_match('/^##?\s+' . preg_quote($section, '/') . '/mi', $content)) {
+        if (!preg_match('/^##\s+' . preg_quote($section, '/') . '/mi', $content)) {
             $missingSections[] = $section;
         }
     }
