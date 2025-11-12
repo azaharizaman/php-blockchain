@@ -176,36 +176,14 @@ PHP;
      */
     private function runScript(string $driversDir, string $docsDir, ?int &$exitCode = null): string
     {
-        // Create a modified version of the script for testing
-        $scriptContent = file_get_contents($this->scriptPath);
-        
-        // Replace the directory paths
-        $scriptContent = str_replace(
-            "\$root = dirname(__DIR__);",
-            "\$root = '" . addslashes(dirname(__DIR__, 2)) . "';",
-            $scriptContent
+        // Execute the script with custom directory arguments
+        $cmd = sprintf(
+            'php %s --drivers-dir=%s --docs-dir=%s 2>&1',
+            escapeshellarg($this->scriptPath),
+            escapeshellarg($driversDir),
+            escapeshellarg($docsDir)
         );
-        $scriptContent = str_replace(
-            "\$driversDir = \$root . '/src/Drivers';",
-            "\$driversDir = '" . addslashes($driversDir) . "';",
-            $scriptContent
-        );
-        $scriptContent = str_replace(
-            "\$docsDir = \$root . '/docs/drivers';",
-            "\$docsDir = '" . addslashes($docsDir) . "';",
-            $scriptContent
-        );
-
-        // Write temporary test script
-        $tempScript = sys_get_temp_dir() . '/test-generate-script-' . uniqid() . '.php';
-        file_put_contents($tempScript, $scriptContent);
-
-        // Execute the script
-        exec("php " . escapeshellarg($tempScript) . " 2>&1", $output, $exitCode);
-        
-        // Clean up
-        unlink($tempScript);
-
+        exec($cmd, $output, $exitCode);
         return implode("\n", $output);
     }
 
