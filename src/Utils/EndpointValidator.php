@@ -41,10 +41,12 @@ class EndpointValidator
     {
         if ($adapter === null) {
             // Create default adapter if not provided
-            $this->adapter = new GuzzleAdapter(new Client(), [
-                'timeout' => 10,
-                'connect_timeout' => 5,
-            ]);
+            $this->adapter = new GuzzleAdapter(
+                new Client([
+                    'timeout' => 10,
+                    'connect_timeout' => 5,
+                ])
+            );
         } else {
             $this->adapter = $adapter;
         }
@@ -218,7 +220,8 @@ class EndpointValidator
             $latency = microtime(true) - $startTime;
 
             // Validate JSON-RPC response structure
-            if (!isset($response['jsonrpc']) && !isset($response['result'])) {
+            // Must have 'jsonrpc' field and either 'result' or 'error' field
+            if (!isset($response['jsonrpc']) || (!isset($response['result']) && !isset($response['error']))) {
                 return new ValidationResult(
                     false,
                     $latency,
