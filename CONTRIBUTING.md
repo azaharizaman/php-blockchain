@@ -57,7 +57,9 @@ composer phpstan   # Run static analysis
 composer lint      # Check code style
 ```
 
-All these checks are automatically run in CI on pull requests.
+All these checks are automatically run in CI on pull requests. Specifically:
+- The `static-analysis` job runs PHPStan (static analysis) and PHPCS (code style).
+- The `test-and-analyse` job runs tests and static analysis separately.
 
 ## Agent workflows
 
