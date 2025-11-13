@@ -51,8 +51,9 @@ jobs:
           echo "✓ PHPCS: Code style compliant with PSR-12"
 
   test-and-analyse:
-    name: Run tests and static analysis
+    name: Run tests
     runs-on: ubuntu-latest
+    needs: [static-analysis]
     permissions:
       contents: read
     env:
@@ -82,12 +83,9 @@ jobs:
       - name: Run tests
         run: composer test || (echo "Tests failed" && exit 1)
 
-      - name: Run static analysis
-        run: composer analyse || (echo "Static analysis failed" && exit 1)
-
       - name: Summarize
         run: |
-          echo "Tests and static analysis complete."
+          echo "Tests complete."
 
       - name: Run integration tests (optional)
         if: env.RUN_INTEGRATION_TESTS == 'true'

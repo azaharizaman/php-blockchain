@@ -13,3 +13,5 @@ parameters:
         - '#Call to an undefined method Mockery\\#'
     tmpDir: storage/phpstan
     checkMissingIterableValueType: false
+    # Note: Memory limit (--memory-limit=1G) is specified in composer.json scripts
+    # rather than here to allow flexibility for different environments and CI configurations
