@@ -24,5 +24,16 @@
         <include>
             <directory>src</directory>
         </include>
+        <exclude>
+            <directory>tests</directory>
+        </exclude>
     </source>
+
+    <coverage>
+        <report>
+            <html outputDirectory="coverage/html"/>
+            <clover outputFile="coverage/clover.xml"/>
+            <text outputFile="php://stdout" showUncoveredFiles="true"/>
+        </report>
+    </coverage>
 </phpunit>

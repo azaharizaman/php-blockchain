@@ -305,3 +305,225 @@ export ETHEREUM_RPC_ENDPOINT=https://sepolia.infura.io/v3/YOUR_PROJECT_ID
 - [Sepolia Etherscan](https://sepolia.etherscan.io/)
 - [Infura Documentation](https://docs.infura.io/)
 - [Alchemy Documentation](https://docs.alchemy.com/)
+
+## Code Coverage
+
+Code coverage helps ensure that your tests thoroughly exercise the codebase. This project is configured to generate coverage reports and enforce minimum coverage thresholds.
+
+### Generating Coverage Reports
+
+#### HTML Coverage Report
+
+Generate an HTML coverage report that you can open in your browser:
+
+```bash
+composer run test:coverage
+```
+
+This creates an interactive HTML report in the `coverage/html` directory. Open `coverage/html/index.html` in your browser to explore coverage by file and line.
+
+#### Text Coverage Report
+
+Generate a text-based coverage summary in your terminal:
+
+```bash
+composer run test:coverage-text
+```
+
+This displays coverage statistics directly in the console, useful for quick checks.
+
+#### Clover XML Report
+
+Generate a Clover XML report for CI/CD integration:
+
+```bash
+composer run test:coverage-clover
+```
+
+This creates `coverage/clover.xml`, which can be uploaded to coverage services like Codecov or Coveralls.
+
+### Coverage Requirements
+
+PHPUnit is configured to require minimum coverage thresholds:
+
+- **Overall coverage**: The codebase should maintain good test coverage
+- **Per-file coverage**: Individual files should be well-tested
+
+Coverage reports help identify:
+- Untested code paths
+- Missing edge case tests
+- Areas needing additional test coverage
+
+### Viewing Coverage Reports
+
+#### Local HTML Report
+
+After running `composer run test:coverage`:
+
+1. Open `coverage/html/index.html` in your browser
+2. Navigate through files to see line-by-line coverage
+3. Green lines are covered by tests
+4. Red lines are not covered
+5. Coverage percentages shown for each file and overall
+
+#### CI Coverage Reports
+
+Coverage is automatically generated in CI and uploaded to Codecov:
+
+1. Coverage reports are generated on every pull request
+2. Results are uploaded to Codecov for tracking
+3. Coverage trends are visible in the Codecov dashboard
+4. Pull requests show coverage changes
+
+### Coverage Exclusions
+
+The following are excluded from coverage:
+
+- **Tests directory**: Test files themselves are not measured
+- **Vendor directory**: Third-party dependencies are excluded
+- **Intentionally untested code**: Code marked with coverage annotations
+
+To exclude specific code from coverage, use PHPDoc annotations:
+
+```php
+// @codeCoverageIgnoreStart
+function debugOnlyFunction() {
+    // This code won't be counted in coverage
+}
+// @codeCoverageIgnoreEnd
+```
+
+Or for a single line:
+
+```php
+throw new Exception('Not implemented'); // @codeCoverageIgnore
+```
+
+### Coverage Thresholds
+
+Specific numeric coverage thresholds are strictly enforced in the build. The project requires:
+
+- **Line coverage**: At least 80% of lines must be covered by tests
+- **Method coverage**: At least 85% of public methods must be covered by tests
+- **Branch coverage**: Different conditional paths should be tested where possible
+
+### Best Practices
+
+1. **Write tests first**: Follow TDD to ensure new code is tested
+2. **Check coverage regularly**: Run coverage reports before committing
+3. **Don't chase 100%**: Focus on testing important code paths
+4. **Test behavior, not coverage**: Coverage is a tool, not the goal
+5. **Review coverage reports**: Use reports to find gaps in testing
+
+### Troubleshooting Coverage
+
+#### Missing Coverage Driver
+
+**Problem**: Error about missing coverage driver (Xdebug or PCOV)
+
+**Solution**: Install a coverage driver:
+
+```bash
+# Install PCOV (recommended, faster)
+pecl install pcov
+
+# Or use Xdebug
+pecl install xdebug
+```
+
+#### Slow Coverage Generation
+
+**Problem**: Coverage generation takes a long time
+
+**Solution**: 
+- Use PCOV instead of Xdebug (much faster)
+- Run coverage on specific test suites: `vendor/bin/phpunit --testsuite unit --coverage-text`
+- Use text reports instead of HTML for quicker feedback
+
+#### Coverage Reports in Wrong Directory
+
+**Problem**: Can't find coverage reports
+
+**Solution**: Reports are generated in the `coverage/` directory:
+- HTML: `coverage/html/index.html`
+- Clover: `coverage/clover.xml`
+
+### Coverage in CI
+
+Coverage is automatically generated in the CI pipeline:
+
+```yaml
+# .github/workflows/agent-tasks.yml
+- name: Run tests with coverage
+  run: composer run test:coverage-clover
+
+- name: Upload coverage to Codecov
+  uses: codecov/codecov-action@v4
+  with:
+    files: ./coverage/clover.xml
+```
+
+To enable Codecov in your repository:
+
+1. Sign up at [codecov.io](https://codecov.io/)
+2. Add your repository
+3. Add `CODECOV_TOKEN` secret in GitHub repository settings
+4. Coverage will be uploaded automatically on every push
+
+### Adding Coverage Badge to README
+
+Add a coverage badge to display coverage percentage in your README:
+
+```markdown
+[![codecov](https://codecov.io/gh/your-username/php-blockchain/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/php-blockchain)
+```
+
+Replace `your-username` with your GitHub username or organization name.
+
+
+### Enforcing Coverage Thresholds
+
+The project includes a coverage threshold checker script that enforces minimum coverage requirements:
+
+- **Line coverage**: 80% minimum
+- **Method coverage**: 85% minimum
+
+To check if your coverage meets the thresholds:
+
+```bash
+composer run test:check-coverage
+```
+
+This command will:
+1. Generate coverage reports
+2. Check if thresholds are met
+3. Exit with error code 1 if thresholds are not met
+4. Exit with code 0 if all thresholds are met
+
+Example output:
+
+```
+Coverage Report:
+================
+Line Coverage:   82.45% (234/284 lines)
+Method Coverage: 87.50% (42/48 methods)
+
+Thresholds:
+Line Coverage:   80.0% required
+Method Coverage: 85.0% required
+
+✓ All coverage thresholds met!
+```
+
+If thresholds are not met, the build will fail in CI, ensuring code quality standards are maintained.
+
+### Adjusting Coverage Thresholds
+
+To adjust coverage thresholds, edit `scripts/check-coverage.php`:
+
+```php
+// Configuration
+$minLineCoverage = 80.0;  // Change this value
+$minMethodCoverage = 85.0; // Change this value
+```
+
