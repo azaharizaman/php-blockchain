@@ -35,6 +35,9 @@
   },
   "scripts": {
     "test": "vendor/bin/phpunit",
+    "test:coverage": "vendor/bin/phpunit --coverage-html coverage/html",
+    "test:coverage-text": "vendor/bin/phpunit --coverage-text",
+    "test:coverage-clover": "vendor/bin/phpunit --coverage-clover coverage/clover.xml",
     "integration-test": "vendor/bin/phpunit --testsuite integration || vendor/bin/phpunit tests/Integration || echo \"No integration tests found\"",
     "generate-docs": "php scripts/generate-driver-docs.php",
     "check-docs": "php scripts/check-driver-docs.php",
