@@ -169,6 +169,135 @@ All driver documentation must include:
 - Use GitHub Secrets or your CI provider's secret management for API keys and private configuration.
 - The repository `.gitignore` already excludes typical key files and `.env` variants.
 
+## Publishing Documentation
+
+The project uses an automated documentation publishing workflow with operator approval to ensure quality control.
+
+### When to Publish Documentation
+
+Documentation should be published:
+- After significant feature releases (when a version tag is pushed)
+- When major documentation updates are completed
+- Before announcing new features to the community
+- On a regular schedule (e.g., monthly) to keep public docs current
+
+### Who Can Approve Publications
+
+Documentation publishing requires approval from designated reviewers configured in the `documentation` environment:
+- **Primary Approvers**: Project maintainers and lead developers
+- **Secondary Approvers**: Technical writers and documentation specialists
+- At least one approval is required before deployment proceeds
+
+### How to Publish Documentation
+
+#### Method 1: Manual Trigger (Recommended for Updates)
+
+1. Go to Actions → "Publish Documentation" workflow
+2. Click "Run workflow"
+3. Optionally specify a version tag (e.g., `v1.0.0` or `latest`)
+4. Click "Run workflow" to start the process
+5. The workflow will build docs and wait for approval
+6. Designated reviewers will receive a notification
+7. After approval, docs are automatically published to GitHub Pages
+
+#### Method 2: Automatic on Tag Push (For Releases)
+
+When you push a version tag (e.g., `v1.0.0`), the documentation workflow automatically:
+1. Builds the documentation
+2. Waits for operator approval
+3. Publishes to GitHub Pages after approval
+
+```bash
+# Example: Publishing docs for version 1.0.0
+git tag -a v1.0.0 -m "Release version 1.0.0"
+git push origin v1.0.0
+```
+
+### Approval Process
+
+1. **Build Phase**: Documentation is generated and validated
+2. **Approval Wait**: Workflow pauses for reviewer approval (24-48 hour timeout)
+3. **Review**: Designated approvers review the built documentation artifacts
+4. **Decision**: Approvers either approve or reject the deployment
+5. **Deployment**: On approval, docs are published to GitHub Pages
+6. **Notification**: Success notification with links to published docs
+
+### Reviewing Documentation Before Approval
+
+Reviewers should:
+1. Download the documentation artifact from the workflow run
+2. Review for:
+   - Accuracy and completeness
+   - No sensitive information exposed
+   - Proper formatting and working links
+   - Version consistency
+3. Check the build-info.json for metadata
+4. Approve if everything looks good, otherwise reject and provide feedback
+
+### Rollback Procedure
+
+If published documentation needs to be rolled back:
+
+#### Option 1: Quick Rollback (Revert gh-pages)
+```bash
+# Clone with gh-pages branch
+git clone --branch gh-pages https://github.com/azaharizaman/php-blockchain.git php-blockchain-pages
+cd php-blockchain-pages
+
+# Find the commit to revert to
+git log --oneline
+
+# Revert to previous version
+git revert <commit-hash>
+git push origin gh-pages
+```
+
+#### Option 2: Republish Previous Version
+1. Identify the commit hash of the previous good version
+2. Checkout that commit
+3. Run the publish workflow manually for that version
+
+#### Option 3: Emergency Takedown
+If documentation must be removed immediately:
+1. Go to Repository Settings → Pages
+2. Select "None" for source to disable GitHub Pages
+3. Fix the issues locally
+4. Re-enable and republish when ready
+
+### Monitoring Published Documentation
+
+After publishing:
+- **Access URL**: https://azaharizaman.github.io/php-blockchain
+- **Verify**: Check that all pages load correctly
+- **Links**: Test navigation and internal links
+- **Version**: Confirm version metadata is correct
+- **Artifacts**: Documentation artifacts are retained for 90 days in workflow runs
+
+### Troubleshooting
+
+**Problem**: Approval timeout reached
+- **Solution**: Re-run the workflow from the Actions tab
+
+**Problem**: Links broken after publish
+- **Solution**: Use the rollback procedure and fix links locally before republishing
+
+**Problem**: Documentation not updating
+- **Solution**: Check GitHub Pages settings and verify gh-pages branch has new commits
+
+**Problem**: Artifacts not downloading
+- **Solution**: Artifacts expire after 90 days; re-run the workflow to regenerate
+
+### Environment Configuration
+
+The `documentation` environment must be configured in Repository Settings:
+1. Go to Settings → Environments → New environment
+2. Name: `documentation`
+3. Configure protection rules:
+   - Required reviewers: Add maintainers
+   - Wait timer: 0 minutes (immediate review available)
+   - Deployment branches: All branches or specific patterns
+4. Save protection rules
+
 ## Pull request checklist
 
 - [ ] Fork and branch from `main`

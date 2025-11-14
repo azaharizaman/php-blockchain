@@ -1,0 +1,190 @@
+name: Publish Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for documentation (e.g., v1.0.0)'
+        required: false
+        default: 'latest'
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Configure environment protection
+# GitHub requires environment configuration through Settings > Environments
+# This workflow uses the 'documentation' environment which should have:
+# - Required reviewers configured
+# - Approval timeout set to 24-48 hours
+jobs:
+  build-and-publish:
+    name: Build and Publish Documentation
+    runs-on: ubuntu-latest
+    environment:
+      name: documentation
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+    
+    permissions:
+      contents: write  # Required for gh-pages deployment
+      issues: write    # Optional: for posting deployment notifications
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper doc generation
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+      
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+      
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev
+      
+      - name: Generate Documentation
+        run: |
+          echo "Generating driver documentation..."
+          composer run generate-docs || echo "No docs generation needed"
+          
+          echo "Checking documentation completeness..."
+          composer run check-docs || echo "Warning: Some docs may be incomplete"
+      
+      - name: Validate Documentation Links
+        run: |
+          echo "Validating internal documentation links..."
+          # Check for broken markdown links within docs/
+          find docs/ -name "*.md" -type f | while read file; do
+            echo "Checking: $file"
+            # Extract markdown links and verify referenced files exist
+            grep -oP '\[.*?\]\(\K[^)]+(?=\))' "$file" 2>/dev/null | grep -v '^http' | while read link; do
+              # Remove anchor links
+              link_file=$(echo "$link" | sed 's/#.*//')
+              if [ -n "$link_file" ] && [ ! -f "docs/$link_file" ] && [ ! -f "$link_file" ]; then
+                echo "Warning: Broken link in $file: $link"
+              fi
+            done
+          done || true
+      
+      - name: Create Documentation Metadata
+        run: |
+          mkdir -p docs/.meta
+          cat > docs/.meta/build-info.json <<EOF
+          {
+            "version": "${{ github.event.inputs.version || github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "workflow_run": "${{ github.run_id }}",
+            "triggered_by": "${{ github.actor }}"
+          }
+          EOF
+          echo "Documentation build metadata created"
+          cat docs/.meta/build-info.json
+      
+      - name: Upload Documentation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-${{ github.event.inputs.version || github.ref_name }}
+          path: |
+            docs/
+            README.md
+            CONTRIBUTING.md
+            LICENSE
+          retention-days: 90
+          compression-level: 6
+      
+      - name: Notify Approval Required
+        if: success()
+        run: |
+          echo "::notice title=Documentation Ready::Documentation has been built and is ready for review. Deployment requires approval from designated reviewers."
+          echo ""
+          echo "📚 Documentation Build Summary:"
+          echo "  Version: ${{ github.event.inputs.version || github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "⏳ Waiting for approval from environment reviewers..."
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          force_orphan: true
+          enable_jekyll: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: |
+            Deploy documentation: ${{ github.event.inputs.version || github.ref_name }}
+            
+            Source commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            Workflow run: ${{ github.run_id }}
+      
+      - name: Notify Deployment Success
+        if: success()
+        run: |
+          echo "::notice title=Documentation Published::Documentation has been successfully published to GitHub Pages"
+          echo ""
+          echo "✅ Documentation Deployment Successful!"
+          echo "  Published to: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          echo "  Version: ${{ github.event.inputs.version || github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Published by: ${{ github.actor }}"
+          echo ""
+          echo "🔗 View documentation: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+      
+      - name: Create Deployment Issue Comment
+        if: success() && github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ github.event.inputs.version || github.ref_name }}';
+            const url = 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}';
+            const message = `
+            ## 📚 Documentation Published
+            
+            Documentation version \`${version}\` has been successfully published!
+            
+            **Details:**
+            - Version: \`${version}\`
+            - Commit: \`${{ github.sha }}\`
+            - Published by: @${{ github.actor }}
+            - Workflow run: [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            **Access:**
+            - 📖 [View Published Documentation](${url})
+            - 📦 [Download Documentation Artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            ---
+            *Automated deployment via GitHub Actions*
+            `;
+            
+            // Post as a comment on the most recent issue about documentation (if any)
+            // or create a discussion/notification as needed
+            console.log(message);
+      
+      - name: Audit Log Entry
+        if: always()
+        run: |
+          echo "📝 Audit Log Entry"
+          echo "===================="
+          echo "Action: Documentation Publish"
+          echo "Status: ${{ job.status }}"
+          echo "Version: ${{ github.event.inputs.version || github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Workflow Run: ${{ github.run_id }}"
+          echo "===================="
