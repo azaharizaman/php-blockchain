@@ -480,3 +480,50 @@ Add a coverage badge to display coverage percentage in your README:
 
 Replace `your-username` with your GitHub username or organization name.
 
+
+### Enforcing Coverage Thresholds
+
+The project includes a coverage threshold checker script that enforces minimum coverage requirements:
+
+- **Line coverage**: 80% minimum
+- **Method coverage**: 85% minimum
+
+To check if your coverage meets the thresholds:
+
+```bash
+composer run test:check-coverage
+```
+
+This command will:
+1. Generate coverage reports
+2. Check if thresholds are met
+3. Exit with error code 1 if thresholds are not met
+4. Exit with code 0 if all thresholds are met
+
+Example output:
+
+```
+Coverage Report:
+================
+Line Coverage:   82.45% (234/284 lines)
+Method Coverage: 87.50% (42/48 methods)
+
+Thresholds:
+Line Coverage:   80.0% required
+Method Coverage: 85.0% required
+
+✓ All coverage thresholds met!
+```
+
+If thresholds are not met, the build will fail in CI, ensuring code quality standards are maintained.
+
+### Adjusting Coverage Thresholds
+
+To adjust coverage thresholds, edit `scripts/check-coverage.php`:
+
+```php
+// Configuration
+$minLineCoverage = 80.0;  // Change this value
+$minMethodCoverage = 85.0; // Change this value
+```
+

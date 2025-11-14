@@ -133,6 +133,10 @@ jobs:
       - name: Run tests with coverage
         run: composer run test:coverage-clover
 
+      - name: Check coverage thresholds
+        run: php scripts/check-coverage.php
+        continue-on-error: false
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
