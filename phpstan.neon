@@ -1,0 +1,17 @@
+parameters:
+    level: 7
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - vendor
+        - storage
+        - tools/agent
+    ignoreErrors:
+        # Allow dynamic properties for test mocks
+        - '#Access to an undefined property Mockery\\#'
+        - '#Call to an undefined method Mockery\\#'
+    tmpDir: storage/phpstan
+    checkMissingIterableValueType: false
+    # Note: Memory limit (--memory-limit=1G) is specified in composer.json scripts
+    # rather than here to allow flexibility for different environments and CI configurations

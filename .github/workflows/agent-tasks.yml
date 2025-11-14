@@ -3,12 +3,57 @@ name: Agent Tasks (CI)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
   workflow_dispatch: {}
 
 jobs:
-  test-and-analyse:
-    name: Run tests and static analysis
+  static-analysis:
+    name: Static Analysis (PHPStan & PHPCS)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: composer run phpstan || (echo "PHPStan analysis failed. Run 'composer run phpstan' locally to see details." && exit 1)
+
+      - name: Run PHPCS
+        run: composer run lint || (echo "PHPCS found code style violations. Run 'composer run fix' to auto-fix or 'composer run lint' to see details." && exit 1)
+
+      - name: Summarize
+        if: success()
+        run: |
+          echo "✓ Static analysis passed"
+          echo "✓ PHPStan: No type errors found"
+          echo "✓ PHPCS: Code style compliant with PSR-12"
+
+  test-and-analyse:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: [static-analysis]
     permissions:
       contents: read
     env:
@@ -38,12 +83,9 @@ jobs:
       - name: Run tests
         run: composer test || (echo "Tests failed" && exit 1)
 
-      - name: Run static analysis
-        run: composer analyse || (echo "Static analysis failed" && exit 1)
-
       - name: Summarize
         run: |
-          echo "Tests and static analysis complete."
+          echo "Tests complete."
 
       - name: Run integration tests (optional)
         if: env.RUN_INTEGRATION_TESTS == 'true'

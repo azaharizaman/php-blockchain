@@ -75,6 +75,7 @@ pids
 # Static analysis
 /.phpstan.cache
 /.psalm.cache
+/storage/phpstan/
 phpstan.phar
 phpunit.phar
 

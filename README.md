@@ -547,10 +547,10 @@ vendor/bin/phpunit --coverage-html coverage
 composer analyse
 
 # Check coding standards
-composer cs-check
+composer lint
 
 # Fix coding standards
-composer cs-fix
+composer fix
 ```
 
 ### Integration Tests

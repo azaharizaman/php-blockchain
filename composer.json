@@ -38,7 +38,10 @@
     "integration-test": "vendor/bin/phpunit --testsuite integration || vendor/bin/phpunit tests/Integration || echo \"No integration tests found\"",
     "generate-docs": "php scripts/generate-driver-docs.php",
     "check-docs": "php scripts/check-driver-docs.php",
-    "analyse": "vendor/bin/phpstan analyse --memory-limit=1G --level=7 src tests"
+    "analyse": "vendor/bin/phpstan analyse --memory-limit=1G",
+    "phpstan": "vendor/bin/phpstan analyse --memory-limit=1G",
+    "lint": "vendor/bin/phpcs",
+    "fix": "vendor/bin/phpcbf"
   },
   "extra": {
     "branch-alias": {

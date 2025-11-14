@@ -19,6 +19,48 @@ composer analyse
 
 Unit tests use PHPUnit. Driver tests should mock network traffic using `GuzzleHttp\Handler\MockHandler` and `HandlerStack`.
 
+## Code quality checks
+
+This project enforces code quality through static analysis and code style checks:
+
+### PHPStan (Static Analysis)
+
+PHPStan analyzes code for type errors and potential bugs at level 7.
+
+```bash
+# Run PHPStan
+composer run phpstan
+
+# Or use the analyse alias
+composer run analyse
+```
+
+### PHP_CodeSniffer (Code Style)
+
+PHPCS enforces PSR-12 coding standards.
+
+```bash
+# Check code style
+composer run lint
+
+# Auto-fix code style issues
+composer run fix
+```
+
+### Running all checks
+
+Before committing, run all quality checks:
+
+```bash
+composer test      # Run tests
+composer phpstan   # Run static analysis
+composer lint      # Check code style
+```
+
+All these checks are automatically run in CI on pull requests. Specifically:
+- The `static-analysis` job runs PHPStan (static analysis) and PHPCS (code style).
+- The `test-and-analyse` job runs tests and static analysis separately.
+
 ## Agent workflows
 
 The repository includes an agent config at `.copilot/agent.yml` and an operator guide at `.copilot/README.md`.
@@ -132,6 +174,7 @@ All driver documentation must include:
 - [ ] Fork and branch from `main`
 - [ ] Add tests for new behavior
 - [ ] Run `composer test` and `composer analyse`
+- [ ] Run `composer lint` to check code style (use `composer fix` to auto-fix)
 - [ ] Keep changes small and well-scoped
 - [ ] Ensure no secrets are added
 - [ ] Add or update docs for public APIs
