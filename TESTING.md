@@ -401,11 +401,11 @@ throw new Exception('Not implemented'); // @codeCoverageIgnore
 
 ### Coverage Thresholds
 
-While specific numeric thresholds aren't strictly enforced in the build, the project aims for:
+Specific numeric coverage thresholds are strictly enforced in the build. The project requires:
 
-- **High line coverage**: Most code paths should be tested
-- **Method coverage**: All public methods should have tests
-- **Branch coverage**: Different conditional paths should be tested
+- **Line coverage**: At least 80% of lines must be covered by tests
+- **Method coverage**: At least 85% of public methods must be covered by tests
+- **Branch coverage**: Different conditional paths should be tested where possible
 
 ### Best Practices
 

@@ -153,10 +153,10 @@ jobs:
             php -r "
               \$xml = simplexml_load_file('coverage/clover.xml');
               \$metrics = \$xml->project->metrics;
-              \$total = (int)\$metrics['elements'];
-              \$covered = (int)\$metrics['coveredelements'];
-              \$percentage = \$total > 0 ? round((\$covered / \$total) * 100, 2) : 0;
-              echo \"Coverage: \$percentage% (\$covered/\$total elements)\\n\";
+              \$totalLines = (int)\$metrics['statements'];
+              \$coveredLines = (int)\$metrics['coveredstatements'];
+              \$lineCoverage = \$totalLines > 0 ? round((\$coveredLines / \$totalLines) * 100, 2) : 0;
+              echo \"Line Coverage: \$lineCoverage% (\$coveredLines/\$totalLines lines)\\n\";
             "
           else
             echo "Coverage report not found"

@@ -26,8 +26,24 @@ if (!$xml) {
     exit(1);
 }
 
+// Validate XML structure
+if (!isset($xml->project->metrics)) {
+    fwrite(STDERR, "Error: Invalid coverage file structure\n");
+    exit(1);
+}
+
 // Extract metrics
 $metrics = $xml->project->metrics;
+
+// Validate required attributes exist
+$requiredAttrs = ['statements', 'coveredstatements', 'methods', 'coveredmethods'];
+foreach ($requiredAttrs as $attr) {
+    if (!isset($metrics[$attr])) {
+        fwrite(STDERR, "Error: Missing required metric '$attr' in coverage file\n");
+        exit(1);
+    }
+}
+
 $totalLines = (int)$metrics['statements'];
 $coveredLines = (int)$metrics['coveredstatements'];
 $totalMethods = (int)$metrics['methods'];
