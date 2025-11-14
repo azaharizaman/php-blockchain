@@ -5,9 +5,9 @@ Welcome to the comprehensive documentation for the PHP Blockchain Integration La
 ## 📚 Documentation Index
 
 ### Getting Started
-- [Main README](../README.md) - Project overview and quick start
-- [Contributing Guide](../CONTRIBUTING.md) - How to contribute to the project
-- [Testing Guide](../TESTING.md) - Testing standards and practices
+- [Main README](https://github.com/azaharizaman/php-blockchain) - Project overview and quick start
+- [Contributing Guide](https://github.com/azaharizaman/php-blockchain/blob/main/CONTRIBUTING.md) - How to contribute to the project
+- [Testing Guide](https://github.com/azaharizaman/php-blockchain/blob/main/TESTING.md) - Testing standards and practices
 
 ### Configuration & Setup
 - [Configuration Guide](configuration.md) - Detailed configuration options
@@ -44,19 +44,19 @@ Explore driver-specific documentation in the [drivers/](drivers/) directory.
 ## 🔍 Quick Links
 
 ### For Users
-- **Installation**: See [main README](../README.md#installation)
+- **Installation**: See [main README](https://github.com/azaharizaman/php-blockchain#installation)
 - **Configuration**: See [configuration guide](configuration.md)
-- **Examples**: Check the [examples/](../examples/) directory
+- **Examples**: Check the [examples/](https://github.com/azaharizaman/php-blockchain/tree/main/examples) directory
 
 ### For Developers
-- **Contributing**: See [CONTRIBUTING.md](../CONTRIBUTING.md)
-- **Coding Standards**: See [CODING_GUIDELINES.md](../CODING_GUIDELINES.md)
-- **Testing**: See [TESTING.md](../TESTING.md)
+- **Contributing**: See [CONTRIBUTING.md](https://github.com/azaharizaman/php-blockchain/blob/main/CONTRIBUTING.md)
+- **Coding Standards**: See [CODING_GUIDELINES.md](https://github.com/azaharizaman/php-blockchain/blob/main/CODING_GUIDELINES.md)
+- **Testing**: See [TESTING.md](https://github.com/azaharizaman/php-blockchain/blob/main/TESTING.md)
 
 ### For Operators
-- **Publishing Docs**: See [Publishing Documentation](../CONTRIBUTING.md#publishing-documentation)
-- **CI/CD**: See [.github/workflows/](.github/workflows/)
-- **Security**: See [Security section](../CONTRIBUTING.md#security-and-secrets)
+- **Publishing Docs**: See [Publishing Documentation](https://github.com/azaharizaman/php-blockchain/blob/main/CONTRIBUTING.md#publishing-documentation)
+- **CI/CD**: See [GitHub Actions Workflows](https://github.com/azaharizaman/php-blockchain/tree/main/.github/workflows)
+- **Security**: See [Security section](https://github.com/azaharizaman/php-blockchain/blob/main/CONTRIBUTING.md#security-and-secrets)
 
 ## 📖 Documentation Features
 
@@ -75,7 +75,7 @@ Contributions to documentation are welcome! Please:
 4. Update the table of contents when adding new sections
 5. Test all links and code examples before submitting
 
-See the [Contributing Guide](../CONTRIBUTING.md) for detailed instructions.
+See the [Contributing Guide](https://github.com/azaharizaman/php-blockchain/blob/main/CONTRIBUTING.md) for detailed instructions.
 
 ## 📦 Documentation Build Info
 
@@ -83,8 +83,8 @@ This documentation was built using the automated publishing workflow. Build meta
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/azaharizaman/php-blockchain/blob/main/LICENSE) file for details.
 
 ---
 
-**Need help?** Check the main [README](../README.md) or open an issue on [GitHub](https://github.com/azaharizaman/php-blockchain/issues).
+**Need help?** Check the main [README](https://github.com/azaharizaman/php-blockchain) or open an issue on [GitHub](https://github.com/azaharizaman/php-blockchain/issues).

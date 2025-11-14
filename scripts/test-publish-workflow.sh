@@ -23,7 +23,8 @@ echo ""
 echo "Validating YAML syntax..."
 if command -v python3 &> /dev/null; then
     python3 -c "import yaml; yaml.safe_load(open('$WORKFLOW_FILE'))" 2>&1
-    if [ $? -eq 0 ]; then
+    exit_code=$?
+    if [ $exit_code -eq 0 ]; then
         echo "✓ YAML syntax is valid"
     else
         echo "❌ YAML syntax error"

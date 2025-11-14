@@ -244,12 +244,13 @@ If published documentation needs to be rolled back:
 git clone --branch gh-pages https://github.com/azaharizaman/php-blockchain.git php-blockchain-pages
 cd php-blockchain-pages
 
-# Find the commit to revert to
+# Find the commit to roll back to
 git log --oneline
 
-# Revert to previous version
-git revert <commit-hash>
-git push origin gh-pages
+# Reset to previous good version
+git reset --hard <good-commit-hash>
+git push origin gh-pages --force-with-lease
+```
 ```
 
 #### Option 2: Republish Previous Version

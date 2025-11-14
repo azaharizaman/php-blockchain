@@ -42,7 +42,7 @@ jobs:
           coverage: none
       
       - name: Cache Composer Dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -70,8 +70,12 @@ jobs:
             grep -oP '\[.*?\]\(\K[^)]+(?=\))' "$file" 2>/dev/null | grep -v '^http' | while read link; do
               # Remove anchor links
               link_file=$(echo "$link" | sed 's/#.*//')
-              if [ -n "$link_file" ] && [ ! -f "docs/$link_file" ] && [ ! -f "$link_file" ]; then
-                echo "Warning: Broken link in $file: $link"
+              if [ -n "$link_file" ]; then
+                dir=$(dirname "$file")
+                full_path=$(realpath -m --relative-to=. "$dir/$link_file" 2>/dev/null)
+                if [ ! -f "$full_path" ]; then
+                  echo "Warning: Broken link in $file: $link"
+                fi
               fi
             done
           done || true
@@ -91,10 +95,18 @@ jobs:
           echo "Documentation build metadata created"
           cat docs/.meta/build-info.json
       
+      - name: Sanitize Documentation Version/Ref Name
+        id: sanitize_name
+        run: |
+          RAW_NAME="${{ github.event.inputs.version || github.ref_name || 'unknown' }}"
+          # Replace invalid characters with '-'
+          SAFE_NAME=$(echo "$RAW_NAME" | sed 's#[/\\":*?<>|]#-#g')
+          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
+      
       - name: Upload Documentation Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: documentation-${{ github.event.inputs.version || github.ref_name }}
+          name: documentation-${{ steps.sanitize_name.outputs.safe_name }}
           path: |
             docs/
             README.md
@@ -121,7 +133,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
           publish_branch: gh-pages
-          force_orphan: true
+          force_orphan: false
           enable_jekyll: false
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'

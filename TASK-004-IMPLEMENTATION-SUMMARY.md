@@ -61,7 +61,7 @@ Successfully implemented automated documentation publishing to GitHub Pages with
 ### 5. Deployment
 - ✅ Uses `peaceiris/actions-gh-pages@v4` action
 - ✅ Deploys to `gh-pages` branch
-- ✅ Force orphan commits for clean history
+- ✅ Maintains deployment history (force_orphan: false) for rollback capability
 - ✅ Disables Jekyll processing
 - ✅ Proper commit attribution to github-actions[bot]
 
@@ -168,13 +168,13 @@ git push origin v0.1.0-test
 
 ## Rollback Procedures
 
-### Option 1: Quick Rollback (Revert gh-pages)
+### Option 1: Quick Rollback (Reset gh-pages)
 ```bash
 git clone --branch gh-pages https://github.com/azaharizaman/php-blockchain.git php-blockchain-pages
 cd php-blockchain-pages
-git log --oneline  # Find commit to revert to
-git revert <commit-hash>
-git push origin gh-pages
+git log --oneline  # Find commit to roll back to
+git reset --hard <good-commit-hash>
+git push origin gh-pages --force-with-lease
 ```
 
 ### Option 2: Republish Previous Version
